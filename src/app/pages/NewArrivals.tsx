@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase, Product } from '../../lib/supabase';
-import { mockProducts } from '../data/mockData';
 import { ProductCard } from '../components/ProductCard';
 import { Loader2, Sparkles } from 'lucide-react';
 
@@ -18,13 +17,7 @@ export function NewArrivals() {
         .order('created_at', { ascending: false })
         .limit(12);
 
-      if (error || !data || data.length === 0) {
-        setProducts([...mockProducts].sort((a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ).slice(0, 12));
-      } else {
-        setProducts(data as Product[]);
-      }
+      setProducts((data as Product[]) || []);
       setLoading(false);
     };
 

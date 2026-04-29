@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { supabase, Product } from '../../lib/supabase';
-import { mockProducts } from '../data/mockData';
 import { Button } from '../components/Button';
 import { ArrowRight, Cpu, HardDrive, Monitor, Wifi, TrendingUp } from 'lucide-react';
 
@@ -85,14 +84,7 @@ export function Home() {
         .select('*');
 
       if (error || !products || products.length === 0) {
-        // Fallback: mock data with simulated sales
-        const mockSales: Record<string, number> = { '1': 8, '2': 5, '3': 18, '12': 7, '7': 11, '8': 22 };
-        const withSales = mockProducts.map(p => {
-          const sold = mockSales[p.id] || 0;
-          const original = p.stock + sold;
-          return { ...p, sold, soldPercent: original > 0 ? Math.round((sold / original) * 100) : 0 };
-        });
-        setBestSellers(withSales.filter(p => p.stock > 0).sort((a, b) => b.sold - a.sold).slice(0, 6));
+        setBestSellers([]);
         return;
       }
 

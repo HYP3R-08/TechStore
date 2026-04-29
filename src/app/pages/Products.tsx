@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { supabase, Product } from '../../lib/supabase';
-import { mockProducts, categories } from '../data/mockData';
 import { ProductCard } from '../components/ProductCard';
+
+const categories = ['All', 'Laptop', 'Components', 'Monitor', 'Smartphone', 'Gaming', 'Others'];
 import { ChevronDown, Loader2 } from 'lucide-react';
 
 export function Products() {
@@ -22,16 +23,12 @@ export function Products() {
 
   const fetchProducts = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error || !data || data.length === 0) {
-      setProducts(mockProducts);
-    } else {
-      setProducts(data as Product[]);
-    }
+    setProducts((data as Product[]) || []);
     setLoading(false);
   };
 

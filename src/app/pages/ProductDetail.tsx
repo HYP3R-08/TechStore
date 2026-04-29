@@ -1,7 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
 import { supabase, Product } from '../../lib/supabase';
-import { mockProducts } from '../data/mockData';
 import { ProductCard } from '../components/ProductCard';
 import { Button } from '../components/Button';
 import { ArrowLeft, Check, Loader2, ShoppingCart } from 'lucide-react';
@@ -22,21 +21,13 @@ export function ProductDetail() {
 
   const fetchProduct = async (productId: string) => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('products')
       .select('*')
       .eq('id', productId)
       .single();
 
-    if (error || !data) {
-      const mock = mockProducts.find(p => p.id === productId);
-      if (mock) {
-        setProduct(mock);
-        setRelatedProducts(
-          mockProducts.filter(p => p.category === mock.category && p.id !== productId).slice(0, 4)
-        );
-      }
-    } else {
+    if (data) {
       setProduct(data as Product);
       const { data: related } = await supabase
         .from('products')
