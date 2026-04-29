@@ -6,6 +6,9 @@ import { ProductDetail } from './pages/ProductDetail';
 import { Cart } from './pages/Cart';
 import { Auth } from './pages/Auth';
 import { Admin } from './pages/Admin';
+import { Account } from './pages/Account';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 
 export const router = createBrowserRouter([
   {
@@ -18,6 +21,9 @@ export const router = createBrowserRouter([
       { path: 'cart', Component: Cart },
       { path: 'auth', Component: Auth },
       { path: 'admin', Component: Admin },
+      { path: 'account', Component: Account },
+      { path: 'forgot-password', Component: ForgotPassword },
+      { path: 'reset-password', Component: ResetPassword },
       {
         path: '*',
         Component: () => (

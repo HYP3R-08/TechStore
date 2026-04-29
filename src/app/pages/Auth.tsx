@@ -1,32 +1,43 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { useAuth } from '../../lib/AuthContext';
+import { Cpu } from 'lucide-react';
 
 export function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError('');
+    setMessage('');
+    setLoading(true);
 
     if (isLogin) {
-      // Mock login
-      if (email === 'admin@luxe.com' && password === 'admin') {
-        localStorage.setItem('user', JSON.stringify({ email, role: 'admin' }));
-        navigate('/admin');
+      const { error } = await signIn(email, password);
+      if (error) {
+        setError(error);
       } else {
-        localStorage.setItem('user', JSON.stringify({ email, role: 'customer' }));
         navigate('/');
       }
     } else {
-      // Mock registration
-      localStorage.setItem('user', JSON.stringify({ email, name, role: 'customer' }));
-      navigate('/');
+      const { error } = await signUp(email, password, name);
+      if (error) {
+        setError(error);
+      } else {
+        setMessage('Account created! Check your email to confirm your registration.');
+      }
     }
+    setLoading(false);
   };
 
   return (
@@ -34,13 +45,30 @@ export function Auth() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl p-8 md:p-12 shadow-sm">
           <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center">
+                <Cpu className="w-6 h-6 text-white" />
+              </div>
+            </div>
             <h1 className="text-3xl font-light tracking-tight text-black mb-2">
               {isLogin ? 'Welcome Back' : 'Create Account'}
             </h1>
             <p className="text-sm text-neutral-600 tracking-wide">
-              {isLogin ? 'Sign in to your account' : 'Join our exclusive community'}
+              {isLogin ? 'Sign in to your TechStore account' : 'Join TechStore today'}
             </p>
           </div>
+
+          {error && (
+            <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {message && (
+            <div className="mb-6 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+              {message}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
@@ -49,13 +77,13 @@ export function Auth() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
+                placeholder="Mario Rossi"
                 required
               />
             )}
 
             <Input
-              label="Email Address"
+              label="Email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -70,21 +98,19 @@ export function Auth() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
+              minLength={6}
             />
 
             {isLogin && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  className="text-sm text-neutral-600 hover:text-black transition-colors"
-                >
+              <div className="flex justify-end -mt-2">
+                <Link to="/forgot-password" className="text-sm text-neutral-500 hover:text-black transition-colors">
                   Forgot password?
-                </button>
+                </Link>
               </div>
             )}
 
-            <Button type="submit" fullWidth>
-              {isLogin ? 'Sign In' : 'Create Account'}
+            <Button type="submit" fullWidth disabled={loading}>
+              {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
             </Button>
           </form>
 
@@ -92,7 +118,7 @@ export function Auth() {
             <p className="text-sm text-neutral-600">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => { setIsLogin(!isLogin); setError(''); setMessage(''); }}
                 className="text-black hover:underline font-normal"
               >
                 {isLogin ? 'Sign up' : 'Sign in'}
@@ -100,20 +126,11 @@ export function Auth() {
             </p>
           </div>
 
-          {isLogin && (
-            <div className="mt-8 pt-6 border-t border-neutral-200 text-center">
-              <p className="text-xs text-neutral-500 mb-4">Demo credentials:</p>
-              <div className="space-y-2 text-xs">
-                <p className="text-neutral-600">
-                  Admin: <span className="font-mono bg-neutral-100 px-2 py-1 rounded">admin@luxe.com</span> /
-                  <span className="font-mono bg-neutral-100 px-2 py-1 rounded ml-1">admin</span>
-                </p>
-                <p className="text-neutral-600">
-                  Customer: any email/password
-                </p>
-              </div>
-            </div>
-          )}
+          <div className="mt-6 text-center">
+            <Link to="/" className="text-sm text-neutral-500 hover:text-black transition-colors">
+              ← Back to store
+            </Link>
+          </div>
         </div>
       </div>
     </div>
