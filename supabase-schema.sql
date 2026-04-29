@@ -19,6 +19,7 @@ create table if not exists public.products (
   price       numeric(10, 2) not null,
   category    text not null,
   image_url   text not null default '',
+  images      text[] not null default array[]::text[],
   description text not null default '',
   featured    boolean not null default false,
   stock       integer not null default 0,
@@ -147,6 +148,12 @@ $$;
 create or replace trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Storage bucket for product images (run once)
+-- insert into storage.buckets (id, name, public) values ('product-images', 'product-images', true) on conflict do nothing;
+-- create policy "product_images_public_read" on storage.objects for select using (bucket_id = 'product-images');
+-- create policy "product_images_admin_upload" on storage.objects for insert with check (bucket_id = 'product-images' and public.is_admin());
+-- create policy "product_images_admin_delete" on storage.objects for delete using (bucket_id = 'product-images' and public.is_admin());
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- STOCK DECREMENT ON ORDER CONFIRMED
