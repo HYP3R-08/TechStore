@@ -70,11 +70,26 @@ export function Cart() {
       return;
     }
 
-    localStorage.removeItem('cart');
-    window.dispatchEvent(new Event('storage'));
-    setCartItems([]);
-    setCheckingOut(false);
-    navigate('/', { state: { orderSuccess: true, orderId: order.id.slice(0, 8) } });
+    const { data: fn, error: fnError } = await supabase.functions.invoke('create-checkout-session', {
+      body: {
+        cartItems: cartItems.map(i => ({
+          name: i.name,
+          price: i.price,
+          quantity: i.quantity,
+          image_url: i.image_url,
+        })),
+        orderId: order.id,
+        origin: window.location.origin,
+      },
+    });
+
+    if (fnError || !fn?.url) {
+      alert('Error connecting to payment. Please try again.');
+      setCheckingOut(false);
+      return;
+    }
+
+    window.location.href = fn.url;
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
