@@ -6,7 +6,7 @@ import { supabase, Product, Order, Profile } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import {
   Plus, Edit2, Trash2, LogOut, Loader2, Package, ShoppingBag, Users, X,
-  CheckCircle, XCircle, Truck, PackageCheck, ChevronDown, ChevronUp, Bell
+  CheckCircle, XCircle, Truck, PackageCheck, ChevronDown, ChevronUp, Bell, Upload
 } from 'lucide-react';
 
 const CATEGORIES = ['Laptop', 'Components', 'Monitor', 'Smartphone', 'Gaming', 'Others'];
@@ -92,6 +92,74 @@ export function Admin() {
   );
 }
 
+function ImageUploader({
+  images,
+  onChange,
+}: {
+  images: string[];
+  onChange: (urls: string[]) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+
+  const uploadFile = async (file: File): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from('product-images').upload(path, file);
+    if (error) return null;
+    const { data } = supabase.storage.from('product-images').getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const urls: string[] = [];
+    for (const file of Array.from(files)) {
+      const url = await uploadFile(file);
+      if (url) urls.push(url);
+    }
+    onChange([...images, ...urls]);
+    setUploading(false);
+  };
+
+  const remove = (idx: number) => onChange(images.filter((_, i) => i !== idx));
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm text-neutral-700 tracking-wide">
+        Photos {images.length > 0 && <span className="text-neutral-400">({images.length} — first is cover)</span>}
+      </label>
+
+      {/* Preview grid */}
+      {images.length > 0 && (
+        <div className="grid grid-cols-4 gap-2">
+          {images.map((url, i) => (
+            <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-neutral-100 group">
+              <img src={url} alt="" className="w-full h-full object-cover" />
+              {i === 0 && (
+                <span className="absolute top-1 left-1 bg-black text-white text-[10px] px-1.5 py-0.5 rounded">Cover</span>
+              )}
+              <button
+                onClick={() => remove(i)}
+                className="absolute top-1 right-1 bg-white/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-3 h-3 text-black" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Upload button */}
+      <label className={`flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-neutral-300 rounded-lg cursor-pointer hover:border-black transition-colors text-sm text-neutral-500 hover:text-black ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+        {uploading ? 'Uploading...' : 'Upload photos'}
+        <input type="file" accept="image/*" multiple className="hidden" onChange={e => handleFiles(e.target.files)} />
+      </label>
+    </div>
+  );
+}
+
 function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,15 +178,18 @@ function ProductsTab() {
 
   const handleSave = async () => {
     setSaving(true);
+    const images = editingProduct.images || [];
+    const image_url = images[0] || editingProduct.image_url || '';
     if (editingProduct.id) {
       const { id, created_at, ...updates } = editingProduct as Product;
-      await supabase.from('products').update(updates).eq('id', id);
+      await supabase.from('products').update({ ...updates, image_url, images }).eq('id', id);
     } else {
       await supabase.from('products').insert({
         name: editingProduct.name || '',
         price: editingProduct.price || 0,
         category: editingProduct.category || '',
-        image_url: editingProduct.image_url || '',
+        image_url,
+        images,
         description: editingProduct.description || '',
         featured: editingProduct.featured || false,
         stock: editingProduct.stock || 0,
@@ -131,6 +202,11 @@ function ProductsTab() {
     fetchProducts();
   };
 
+  const openEdit = (product?: Product) => {
+    setEditingProduct(product ? { ...product, images: product.images?.length ? product.images : (product.image_url ? [product.image_url] : []) } : { images: [] });
+    setIsEditing(true);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this product?')) return;
     await supabase.from('products').delete().eq('id', id);
@@ -140,7 +216,7 @@ function ProductsTab() {
   return (
     <div>
       <div className="flex justify-end mb-6">
-        <Button onClick={() => { setIsEditing(true); setEditingProduct({}); }}>
+        <Button onClick={() => openEdit()}>
           <Plus className="w-4 h-4 mr-2" />Add Product
         </Button>
       </div>
@@ -176,7 +252,10 @@ function ProductsTab() {
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <Input label="Image URL" value={editingProduct.image_url || ''} onChange={e => setEditingProduct({ ...editingProduct, image_url: e.target.value })} placeholder="https://images.unsplash.com/..." />
+              <ImageUploader
+                images={editingProduct.images || []}
+                onChange={imgs => setEditingProduct({ ...editingProduct, images: imgs })}
+              />
               <div className="space-y-2">
                 <label className="block text-sm text-neutral-700 tracking-wide">Description</label>
                 <textarea
@@ -243,7 +322,7 @@ function ProductsTab() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => { setIsEditing(true); setEditingProduct(product); }} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
+                        <button onClick={() => openEdit(product)} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
                           <Edit2 className="w-4 h-4 text-neutral-600" />
                         </button>
                         <button onClick={() => handleDelete(product.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors">

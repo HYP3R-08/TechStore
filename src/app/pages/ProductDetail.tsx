@@ -14,6 +14,7 @@ export function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
     if (id) fetchProduct(id);
@@ -86,6 +87,8 @@ export function ProductDetail() {
     );
   }
 
+  const allImages: string[] = product.images?.length ? product.images : [product.image_url];
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -98,12 +101,30 @@ export function ProductDetail() {
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-          <div className="relative bg-neutral-50 aspect-square overflow-hidden rounded-xl">
-            <img
-              src={product.image_url}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+          {/* Image gallery */}
+          <div className="flex flex-col gap-3">
+            <div className="relative bg-neutral-50 aspect-square overflow-hidden rounded-xl">
+              <img
+                src={allImages[activeImage] || product.image_url}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            {allImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {allImages.map((url, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImage(i)}
+                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                      activeImage === i ? 'border-black' : 'border-transparent'
+                    }`}
+                  >
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col justify-center">
