@@ -149,6 +149,31 @@ create or replace trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- STOCK DECREMENT ON ORDER CONFIRMED
+-- ─────────────────────────────────────────────────────────────────────────────
+
+create or replace function public.handle_order_confirmed()
+returns trigger
+language plpgsql
+security definer
+as $$
+begin
+  if new.status = 'processing' and old.status = 'pending' then
+    update public.products p
+    set stock = greatest(0, p.stock - oi.quantity)
+    from public.order_items oi
+    where oi.order_id = new.id
+      and oi.product_id = p.id;
+  end if;
+  return new;
+end;
+$$;
+
+create or replace trigger on_order_confirmed
+  after update on public.orders
+  for each row execute function public.handle_order_confirmed();
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- SEED DATA — Sample IT products
 -- (Optional: run this to populate the database with demo products)
 -- ─────────────────────────────────────────────────────────────────────────────
