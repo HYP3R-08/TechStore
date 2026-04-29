@@ -2,240 +2,251 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { products as initialProducts, Product } from '../data/mockData';
-import { Plus, Edit2, Trash2, LogOut } from 'lucide-react';
+import { supabase, Product, Order, Profile } from '../../lib/supabase';
+import { useAuth } from '../../lib/AuthContext';
+import {
+  Plus, Edit2, Trash2, LogOut, Loader2, Package, ShoppingBag, Users, X,
+  CheckCircle, XCircle, Truck, PackageCheck, ChevronDown, ChevronUp, Bell
+} from 'lucide-react';
+
+const CATEGORIES = ['Laptop', 'Components', 'Monitor', 'Smartphone', 'Gaming', 'Others'];
+const ORDER_STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'] as const;
+
+type Tab = 'products' | 'orders' | 'users';
+
+type OrderWithDetails = Order & {
+  profiles?: { email: string; full_name: string | null };
+  order_items?: Array<{
+    id: string;
+    quantity: number;
+    unit_price: number;
+    products?: { name: string };
+  }>;
+};
 
 export function Admin() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
+  const [activeTab, setActiveTab] = useState<Tab>('products');
   const navigate = useNavigate();
+  const { isAdmin, signOut, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (user.role !== 'admin') {
+    if (!authLoading && !isAdmin) {
       navigate('/auth');
     }
-  }, [navigate]);
+  }, [authLoading, isAdmin, navigate]);
 
-  const handleSave = () => {
-    if (editingProduct.id) {
-      setProducts(products.map(p =>
-        p.id === editingProduct.id ? editingProduct as Product : p
-      ));
-    } else {
-      const newProduct: Product = {
-        ...editingProduct,
-        id: Date.now().toString(),
-        featured: false
-      } as Product;
-      setProducts([...products, newProduct]);
-    }
-    setIsEditing(false);
-    setEditingProduct({});
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this product?')) {
-      setProducts(products.filter(p => p.id !== id));
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-4xl font-light tracking-tight text-black mb-2">
-              Admin Dashboard
-            </h1>
-            <p className="text-neutral-600 text-sm tracking-wide">
-              Manage your products
-            </p>
+            <h1 className="text-4xl font-light tracking-tight text-black mb-1">Admin Dashboard</h1>
+            <p className="text-neutral-600 text-sm tracking-wide">TechStore management panel</p>
           </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={() => {
-                setIsEditing(true);
-                setEditingProduct({});
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Product
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          </div>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
         </div>
 
-        {/* Edit Modal */}
-        {isEditing && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <h2 className="text-2xl font-light tracking-tight text-black mb-6">
-                {editingProduct.id ? 'Edit Product' : 'Add New Product'}
+        {/* Tabs */}
+        <div className="flex gap-1 mb-8 border-b border-neutral-200">
+          {[
+            { id: 'products' as Tab, label: 'Products', icon: Package },
+            { id: 'orders' as Tab, label: 'Orders', icon: ShoppingBag },
+            { id: 'users' as Tab, label: 'Users', icon: Users },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-6 py-3 text-sm tracking-wide transition-colors border-b-2 -mb-px ${
+                activeTab === tab.id
+                  ? 'border-black text-black'
+                  : 'border-transparent text-neutral-500 hover:text-black'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'products' && <ProductsTab />}
+        {activeTab === 'orders' && <OrdersTab />}
+        {activeTab === 'users' && <UsersTab />}
+      </div>
+    </div>
+  );
+}
+
+function ProductsTab() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { fetchProducts(); }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+    setProducts((data as Product[]) || []);
+    setLoading(false);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    if (editingProduct.id) {
+      const { id, created_at, ...updates } = editingProduct as Product;
+      await supabase.from('products').update(updates).eq('id', id);
+    } else {
+      await supabase.from('products').insert({
+        name: editingProduct.name || '',
+        price: editingProduct.price || 0,
+        category: editingProduct.category || '',
+        image_url: editingProduct.image_url || '',
+        description: editingProduct.description || '',
+        featured: editingProduct.featured || false,
+        stock: editingProduct.stock || 0,
+        brand: editingProduct.brand || '',
+      });
+    }
+    setSaving(false);
+    setIsEditing(false);
+    setEditingProduct({});
+    fetchProducts();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this product?')) return;
+    await supabase.from('products').delete().eq('id', id);
+    fetchProducts();
+  };
+
+  return (
+    <div>
+      <div className="flex justify-end mb-6">
+        <Button onClick={() => { setIsEditing(true); setEditingProduct({}); }}>
+          <Plus className="w-4 h-4 mr-2" />Add Product
+        </Button>
+      </div>
+
+      {/* Edit Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-light tracking-tight text-black">
+                {editingProduct.id ? 'Edit Product' : 'Add Product'}
               </h2>
+              <button onClick={() => { setIsEditing(false); setEditingProduct({}); }}>
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            </div>
 
-              <div className="space-y-4">
-                <Input
-                  label="Product Name"
-                  value={editingProduct.name || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  placeholder="Minimalist Watch"
-                />
-
-                <Input
-                  label="Price"
-                  type="number"
-                  value={editingProduct.price || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })}
-                  placeholder="299"
-                />
-
-                <div className="space-y-2">
-                  <label className="block text-sm text-neutral-700 tracking-wide">
-                    Category
-                  </label>
-                  <select
-                    value={editingProduct.category || ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-black transition-colors"
-                  >
-                    <option value="">Select category</option>
-                    <option value="Accessories">Accessories</option>
-                    <option value="Audio">Audio</option>
-                    <option value="Home">Home</option>
-                    <option value="Stationery">Stationery</option>
-                  </select>
-                </div>
-
-                <Input
-                  label="Image URL"
-                  value={editingProduct.image || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                />
-
-                <div className="space-y-2">
-                  <label className="block text-sm text-neutral-700 tracking-wide">
-                    Description
-                  </label>
-                  <textarea
-                    value={editingProduct.description || ''}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-black transition-colors resize-none"
-                    rows={4}
-                    placeholder="Product description..."
-                  />
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="featured"
-                    checked={editingProduct.featured || false}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, featured: e.target.checked })}
-                    className="w-4 h-4 rounded border-neutral-300"
-                  />
-                  <label htmlFor="featured" className="text-sm text-neutral-700">
-                    Featured product
-                  </label>
-                </div>
+            <div className="space-y-4">
+              <Input label="Name" value={editingProduct.name || ''} onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })} placeholder="MacBook Pro 14&quot;" />
+              <Input label="Brand" value={editingProduct.brand || ''} onChange={e => setEditingProduct({ ...editingProduct, brand: e.target.value })} placeholder="Apple" />
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Price ($)" type="number" value={editingProduct.price || ''} onChange={e => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })} placeholder="999" />
+                <Input label="Stock" type="number" value={editingProduct.stock || ''} onChange={e => setEditingProduct({ ...editingProduct, stock: Number(e.target.value) })} placeholder="10" />
               </div>
-
-              <div className="flex gap-3 mt-8">
-                <Button onClick={handleSave} className="flex-1">
-                  Save Product
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setEditingProduct({});
-                  }}
-                  className="flex-1"
+              <div className="space-y-2">
+                <label className="block text-sm text-neutral-700 tracking-wide">Category</label>
+                <select
+                  value={editingProduct.category || ''}
+                  onChange={e => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                  className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-black transition-colors"
                 >
-                  Cancel
-                </Button>
+                  <option value="">Select category</option>
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <Input label="Image URL" value={editingProduct.image_url || ''} onChange={e => setEditingProduct({ ...editingProduct, image_url: e.target.value })} placeholder="https://images.unsplash.com/..." />
+              <div className="space-y-2">
+                <label className="block text-sm text-neutral-700 tracking-wide">Description</label>
+                <textarea
+                  value={editingProduct.description || ''}
+                  onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                  className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-black transition-colors resize-none"
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="featured"
+                  checked={editingProduct.featured || false}
+                  onChange={e => setEditingProduct({ ...editingProduct, featured: e.target.checked })}
+                  className="w-4 h-4 rounded border-neutral-300"
+                />
+                <label htmlFor="featured" className="text-sm text-neutral-700">Featured product</label>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Products Table */}
+            <div className="flex gap-3 mt-8">
+              <Button onClick={handleSave} className="flex-1" disabled={saving}>
+                {saving ? 'Saving...' : 'Save Product'}
+              </Button>
+              <Button variant="outline" onClick={() => { setIsEditing(false); setEditingProduct({}); }} className="flex-1">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>
+      ) : (
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide">
-                    Product
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide">
-                    Category
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide">
-                    Price
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide">
-                    Featured
-                  </th>
-                  <th className="text-right px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide">
-                    Actions
-                  </th>
+                  {['Product', 'Brand', 'Category', 'Price', 'Stock', 'Featured', ''].map(h => (
+                    <th key={h} className="text-left px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
                 {products.map(product => (
                   <tr key={product.id} className="hover:bg-neutral-50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-12 h-12 object-cover bg-neutral-100 rounded"
-                        />
+                      <div className="flex items-center gap-3">
+                        <img src={product.image_url} alt={product.name} className="w-10 h-10 object-cover rounded bg-neutral-100" />
                         <span className="text-sm text-black font-light">{product.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-neutral-600">
-                      {product.category}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-black font-normal">
-                      ${product.price}
-                    </td>
+                    <td className="px-6 py-4 text-sm text-neutral-600">{product.brand}</td>
+                    <td className="px-6 py-4 text-sm text-neutral-600">{product.category}</td>
+                    <td className="px-6 py-4 text-sm text-black">${product.price.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-sm text-neutral-600">{product.stock}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs ${
-                        product.featured
-                          ? 'bg-black text-white'
-                          : 'bg-neutral-100 text-neutral-600'
-                      }`}>
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs ${product.featured ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-600'}`}>
                         {product.featured ? 'Yes' : 'No'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setIsEditing(true);
-                            setEditingProduct(product);
-                          }}
-                          className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
-                        >
+                        <button onClick={() => { setIsEditing(true); setEditingProduct(product); }} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
                           <Edit2 className="w-4 h-4 text-neutral-600" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                        >
+                        <button onClick={() => handleDelete(product.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors">
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </button>
                       </div>
@@ -244,8 +255,264 @@ export function Admin() {
                 ))}
               </tbody>
             </table>
+            {products.length === 0 && (
+              <div className="text-center py-16 text-neutral-500 text-sm">No products yet</div>
+            )}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  pending:    'bg-yellow-100 text-yellow-800 border-yellow-200',
+  processing: 'bg-blue-100 text-blue-800 border-blue-200',
+  shipped:    'bg-purple-100 text-purple-800 border-purple-200',
+  delivered:  'bg-green-100 text-green-800 border-green-200',
+  cancelled:  'bg-red-100 text-red-800 border-red-200',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending', processing: 'Processing',
+  shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled',
+};
+
+function OrderRow({ order, onUpdate }: { order: OrderWithDetails; onUpdate: (id: string, status: Order['status']) => void }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const act = async (status: Order['status']) => {
+    setLoading(true);
+    await onUpdate(order.id, status);
+    setLoading(false);
+  };
+
+  return (
+    <>
+      <tr className={`transition-colors ${order.status === 'pending' ? 'bg-yellow-50/50' : 'hover:bg-neutral-50'}`}>
+        <td className="px-6 py-4">
+          <div className="flex items-center gap-2">
+            {order.status === 'pending' && <span className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />}
+            <span className="text-sm font-mono text-neutral-600">#{order.id.slice(0, 8).toUpperCase()}</span>
+          </div>
+        </td>
+        <td className="px-6 py-4">
+          <div className="text-sm text-black">{order.profiles?.full_name || 'Unknown'}</div>
+          <div className="text-xs text-neutral-500">{order.profiles?.email}</div>
+        </td>
+        <td className="px-6 py-4 text-sm text-black font-normal">${order.total.toFixed(2)}</td>
+        <td className="px-6 py-4 text-sm text-neutral-500">
+          {new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+        </td>
+        <td className="px-6 py-4">
+          <span className={`inline-flex items-center text-xs px-3 py-1 rounded-full border font-normal ${STATUS_COLORS[order.status]}`}>
+            {STATUS_LABELS[order.status]}
+          </span>
+        </td>
+        <td className="px-6 py-4">
+          <div className="flex items-center justify-end gap-2">
+            {/* Action buttons based on current status */}
+            {order.status === 'pending' && (
+              <>
+                <button
+                  onClick={() => act('processing')}
+                  disabled={loading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-xs rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Accept
+                </button>
+                <button
+                  onClick={() => act('cancelled')}
+                  disabled={loading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  Reject
+                </button>
+              </>
+            )}
+            {order.status === 'processing' && (
+              <>
+                <button
+                  onClick={() => act('shipped')}
+                  disabled={loading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 text-xs rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  Mark Shipped
+                </button>
+                <button
+                  onClick={() => act('cancelled')}
+                  disabled={loading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  Cancel
+                </button>
+              </>
+            )}
+            {order.status === 'shipped' && (
+              <button
+                onClick={() => act('delivered')}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 text-xs rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+              >
+                <PackageCheck className="w-3.5 h-3.5" />
+                Mark Delivered
+              </button>
+            )}
+            {/* Expand/collapse items */}
+            <button
+              onClick={() => setOpen(!open)}
+              className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
+            >
+              {open ? <ChevronUp className="w-4 h-4 text-neutral-500" /> : <ChevronDown className="w-4 h-4 text-neutral-500" />}
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      {/* Expanded items row */}
+      {open && (
+        <tr className="bg-neutral-50">
+          <td colSpan={6} className="px-6 py-4">
+            <p className="text-xs text-neutral-500 uppercase tracking-wide mb-3">Order Items</p>
+            <div className="space-y-2">
+              {order.order_items?.map(item => (
+                <div key={item.id} className="flex items-center justify-between text-sm">
+                  <span className="text-black">{item.products?.name || 'Unknown product'}</span>
+                  <span className="text-neutral-500">×{item.quantity} · ${item.unit_price.toFixed(2)} each</span>
+                  <span className="text-black font-normal">${(item.quantity * item.unit_price).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function OrdersTab() {
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { fetchOrders(); }, []);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('orders')
+      .select('*, profiles(email, full_name), order_items(id, quantity, unit_price, products(name))')
+      .order('created_at', { ascending: false });
+    setOrders((data as OrderWithDetails[]) || []);
+    setLoading(false);
+  };
+
+  const updateStatus = async (id: string, status: Order['status']) => {
+    await supabase.from('orders').update({ status }).eq('id', id);
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+  };
+
+  const pendingCount = orders.filter(o => o.status === 'pending').length;
+
+  return loading ? (
+    <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>
+  ) : (
+    <div className="space-y-4">
+      {/* Pending alert */}
+      {pendingCount > 0 && (
+        <div className="flex items-center gap-3 px-5 py-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+          <Bell className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+          <p className="text-sm text-yellow-800">
+            <span className="font-normal">{pendingCount} order{pendingCount > 1 ? 's' : ''}</span> waiting for your approval
+          </p>
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-neutral-50 border-b border-neutral-200">
+              <tr>
+                {['Order ID', 'Customer', 'Total', 'Date', 'Status', 'Actions'].map(h => (
+                  <th key={h} className={`text-left px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide ${h === 'Actions' ? 'text-right' : ''}`}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-200">
+              {orders.map(order => (
+                <OrderRow key={order.id} order={order} onUpdate={updateStatus} />
+              ))}
+            </tbody>
+          </table>
+          {orders.length === 0 && (
+            <div className="text-center py-16 text-neutral-500 text-sm">No orders yet</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UsersTab() {
+  const [users, setUsers] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+    setUsers((data as Profile[]) || []);
+    setLoading(false);
+  };
+
+  const updateRole = async (id: string, role: Profile['role']) => {
+    await supabase.from('profiles').update({ role }).eq('id', id);
+    setUsers(users.map(u => u.id === id ? { ...u, role } : u));
+  };
+
+  return loading ? (
+    <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>
+  ) : (
+    <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-neutral-50 border-b border-neutral-200">
+            <tr>
+              {['Name', 'Email', 'Role', 'Joined'].map(h => (
+                <th key={h} className="text-left px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-200">
+            {users.map(user => (
+              <tr key={user.id} className="hover:bg-neutral-50 transition-colors">
+                <td className="px-6 py-4 text-sm text-black">{user.full_name || '—'}</td>
+                <td className="px-6 py-4 text-sm text-neutral-600">{user.email}</td>
+                <td className="px-6 py-4">
+                  <select
+                    value={user.role}
+                    onChange={e => updateRole(user.id, e.target.value as Profile['role'])}
+                    className="text-xs px-3 py-1 rounded-full border border-neutral-200 cursor-pointer bg-white"
+                  >
+                    <option value="user">user</option>
+                    <option value="admin">admin</option>
+                  </select>
+                </td>
+                <td className="px-6 py-4 text-sm text-neutral-600">
+                  {new Date(user.created_at).toLocaleDateString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {users.length === 0 && (
+          <div className="text-center py-16 text-neutral-500 text-sm">No users yet</div>
+        )}
       </div>
     </div>
   );

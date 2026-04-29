@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '../components/Button';
-import { Trash2, ArrowLeft } from 'lucide-react';
-import { CartItem } from '../data/mockData';
+import { Trash2, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { supabase, CartItem } from '../../lib/supabase';
+import { useAuth } from '../../lib/AuthContext';
 
 export function Cart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [checkingOut, setCheckingOut] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadCart();
@@ -19,16 +22,59 @@ export function Cart() {
 
   const updateQuantity = (id: string, newQuantity: number) => {
     const updatedCart = cartItems.map(item =>
-      item.id === id ? { ...item, quantity: Math.max(1, newQuantity) } : item
+      item.id === id ? { ...item, quantity: Math.min(item.stock, Math.max(1, newQuantity)) } : item
     );
     setCartItems(updatedCart);
     localStorage.setItem('cart', JSON.stringify(updatedCart));
+    window.dispatchEvent(new Event('storage'));
   };
 
   const removeItem = (id: string) => {
     const updatedCart = cartItems.filter(item => item.id !== id);
     setCartItems(updatedCart);
     localStorage.setItem('cart', JSON.stringify(updatedCart));
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const handleCheckout = async () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    setCheckingOut(true);
+
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({ user_id: user.id, status: 'pending', total })
+      .select()
+      .single();
+
+    if (orderError || !order) {
+      alert('Error placing order. Please try again.');
+      setCheckingOut(false);
+      return;
+    }
+
+    const { error: itemsError } = await supabase.from('order_items').insert(
+      cartItems.map(item => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        unit_price: item.price
+      }))
+    );
+
+    if (itemsError) {
+      alert('Error saving order items. Please try again.');
+      setCheckingOut(false);
+      return;
+    }
+
+    localStorage.removeItem('cart');
+    window.dispatchEvent(new Event('storage'));
+    setCartItems([]);
+    setCheckingOut(false);
+    navigate('/', { state: { orderSuccess: true, orderId: order.id.slice(0, 8) } });
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -39,14 +85,15 @@ export function Cart() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center max-w-md px-4">
+          <ShoppingCart className="w-16 h-16 text-neutral-200 mx-auto mb-6" />
           <h2 className="text-3xl font-light tracking-tight text-black mb-4">
             Your cart is empty
           </h2>
           <p className="text-neutral-600 mb-8 text-sm tracking-wide">
-            Looks like you haven't added anything to your cart yet
+            Add some products to get started
           </p>
           <Link to="/products">
-            <Button>Start Shopping</Button>
+            <Button>Shop Now</Button>
           </Link>
         </div>
       </div>
@@ -69,16 +116,12 @@ export function Cart() {
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Cart Items */}
           <div className="lg:col-span-2 space-y-6">
             {cartItems.map(item => (
               <div key={item.id} className="flex gap-6 pb-6 border-b border-neutral-200">
-                <Link
-                  to={`/product/${item.id}`}
-                  className="w-24 h-24 bg-neutral-50 flex-shrink-0 overflow-hidden"
-                >
+                <Link to={`/product/${item.id}`} className="w-24 h-24 bg-neutral-50 flex-shrink-0 overflow-hidden rounded-lg">
                   <img
-                    src={item.image}
+                    src={item.image_url}
                     alt={item.name}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
@@ -92,7 +135,9 @@ export function Cart() {
                     >
                       {item.name}
                     </Link>
-                    <p className="text-sm text-neutral-500 mt-1">{item.category}</p>
+                    <p className="text-sm text-neutral-500 mt-1">
+                      {item.category}{item.brand ? ` · ${item.brand}` : ''}
+                    </p>
                   </div>
 
                   <div className="flex items-center justify-between mt-4">
@@ -111,9 +156,8 @@ export function Cart() {
                         +
                       </button>
                     </div>
-
                     <p className="text-base font-normal text-black">
-                      ${item.price * item.quantity}
+                      ${(item.price * item.quantity).toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -128,12 +172,9 @@ export function Cart() {
             ))}
           </div>
 
-          {/* Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-neutral-50 p-8 rounded-2xl sticky top-24">
-              <h2 className="text-xl font-light tracking-tight text-black mb-6">
-                Order Summary
-              </h2>
+              <h2 className="text-xl font-light tracking-tight text-black mb-6">Order Summary</h2>
 
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-sm">
@@ -147,9 +188,7 @@ export function Cart() {
                   </span>
                 </div>
                 {shipping > 0 && (
-                  <p className="text-xs text-neutral-500">
-                    Free shipping on orders over $100
-                  </p>
+                  <p className="text-xs text-neutral-500">Free shipping on orders over $100</p>
                 )}
               </div>
 
@@ -160,19 +199,27 @@ export function Cart() {
                 </div>
               </div>
 
-              <Button fullWidth onClick={() => alert('Checkout functionality - Connect to payment gateway')}>
-                Proceed to Checkout
+              <Button fullWidth onClick={handleCheckout} disabled={checkingOut}>
+                {checkingOut
+                  ? 'Processing...'
+                  : user
+                  ? 'Proceed to Checkout'
+                  : 'Sign In to Checkout'}
               </Button>
 
+              {!user && (
+                <p className="text-xs text-neutral-500 text-center mt-4">
+                  You must be signed in to complete your order
+                </p>
+              )}
+
               <div className="mt-6 space-y-2">
-                <div className="flex items-center gap-2 text-xs text-neutral-600">
-                  <span>✓</span>
-                  <span>Secure checkout</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-neutral-600">
-                  <span>✓</span>
-                  <span>Free returns within 30 days</span>
-                </div>
+                {['Secure checkout', 'Official warranty on all products', 'Free returns within 30 days'].map(item => (
+                  <div key={item} className="flex items-center gap-2 text-xs text-neutral-600">
+                    <span>✓</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

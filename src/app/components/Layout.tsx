@@ -1,9 +1,15 @@
-import { Outlet } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
 import { Navbar } from './Navbar';
 import { useState, useEffect } from 'react';
+import { Cpu } from 'lucide-react';
 
 export function Layout() {
   const [cartCount, setCartCount] = useState(0);
+  const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   useEffect(() => {
     const updateCartCount = () => {
@@ -14,14 +20,8 @@ export function Layout() {
 
     updateCartCount();
     window.addEventListener('storage', updateCartCount);
-
-    const interval = setInterval(updateCartCount, 1000);
-
-    return () => {
-      window.removeEventListener('storage', updateCartCount);
-      clearInterval(interval);
-    };
-  }, []);
+    return () => window.removeEventListener('storage', updateCartCount);
+  }, [location]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -33,41 +33,46 @@ export function Layout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
             <div>
-              <h3 className="text-xl font-light tracking-tight mb-4">LUXE</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center">
+                  <Cpu className="w-4 h-4 text-black" />
+                </div>
+                <h3 className="text-xl font-light tracking-tight">TechStore</h3>
+              </div>
               <p className="text-sm text-neutral-400 leading-relaxed">
-                Curated essentials for the modern lifestyle
+                The best IT technology at your fingertips. Official products, expert support.
               </p>
             </div>
             <div>
               <h4 className="text-sm font-normal tracking-wide mb-4">Shop</h4>
               <ul className="space-y-2 text-sm text-neutral-400">
                 <li><a href="/products" className="hover:text-white transition-colors">All Products</a></li>
-                <li><a href="/products?category=Accessories" className="hover:text-white transition-colors">Accessories</a></li>
-                <li><a href="/products?category=Audio" className="hover:text-white transition-colors">Audio</a></li>
-                <li><a href="/products?category=Home" className="hover:text-white transition-colors">Home</a></li>
+                <li><a href="/products?category=Laptop" className="hover:text-white transition-colors">Laptop</a></li>
+                <li><a href="/products?category=Components" className="hover:text-white transition-colors">Components</a></li>
+                <li><a href="/products?category=Gaming" className="hover:text-white transition-colors">Gaming</a></li>
               </ul>
             </div>
             <div>
               <h4 className="text-sm font-normal tracking-wide mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-neutral-400">
                 <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Shipping</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Shipping Info</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Returns</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">FAQ</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Technical Support</a></li>
               </ul>
             </div>
             <div>
               <h4 className="text-sm font-normal tracking-wide mb-4">Company</h4>
               <ul className="space-y-2 text-sm text-neutral-400">
                 <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Terms</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><a href="/auth" className="hover:text-white transition-colors">My Account</a></li>
               </ul>
             </div>
           </div>
           <div className="mt-12 pt-8 border-t border-neutral-800 text-center text-sm text-neutral-500">
-            © 2026 LUXE. All rights reserved.
+            © 2026 TechStore. All rights reserved.
           </div>
         </div>
       </footer>
