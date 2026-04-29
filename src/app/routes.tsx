@@ -10,6 +10,7 @@ import { Account } from './pages/Account';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { CheckoutSuccess } from './pages/CheckoutSuccess';
+import { NewArrivals } from './pages/NewArrivals';
 
 export const router = createBrowserRouter([
   {
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
       { path: 'forgot-password', Component: ForgotPassword },
       { path: 'reset-password', Component: ResetPassword },
       { path: 'checkout/success', Component: CheckoutSuccess },
+      { path: 'new-arrivals', Component: NewArrivals },
       {
         path: '*',
         Component: () => (

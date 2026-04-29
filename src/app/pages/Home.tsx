@@ -172,7 +172,7 @@ export function Home() {
 
       {/* Best Sellers */}
       {bestSellers.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <section id="best-sellers" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="flex justify-between items-end mb-12">
             <div>
               <div className="flex items-center gap-2 mb-2">
