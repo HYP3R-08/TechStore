@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { supabase, Product } from '../../lib/supabase';
 import { mockProducts } from '../data/mockData';
 import { Button } from '../components/Button';
@@ -63,6 +63,14 @@ function BestSellerCard({ product }: { product: ProductWithSales }) {
 
 export function Home() {
   const [bestSellers, setBestSellers] = useState<ProductWithSales[]>([]);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash === '#best-sellers') {
+      const el = document.getElementById('best-sellers');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [location.hash, bestSellers]);
 
   useEffect(() => {
     async function loadBestSellers() {
