@@ -84,7 +84,7 @@ export function Home() {
           const original = p.stock + sold;
           return { ...p, sold, soldPercent: original > 0 ? Math.round((sold / original) * 100) : 0 };
         });
-        setBestSellers(withSales.sort((a, b) => b.sold - a.sold).slice(0, 6));
+        setBestSellers(withSales.filter(p => p.stock > 0).sort((a, b) => b.sold - a.sold).slice(0, 6));
         return;
       }
 
@@ -100,7 +100,7 @@ export function Home() {
         return { ...p, sold, soldPercent: original > 0 ? Math.round((sold / original) * 100) : 0 };
       });
 
-      setBestSellers(withSales.sort((a, b) => b.sold - a.sold).slice(0, 6));
+      setBestSellers(withSales.filter(p => p.stock > 0).sort((a, b) => b.sold - a.sold).slice(0, 6));
     }
 
     loadBestSellers();
