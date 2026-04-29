@@ -7,13 +7,10 @@ interface NavbarProps {
   cartCount: number;
 }
 
-const NAV_CATEGORIES = [
-  { name: 'Laptop', path: '/products?category=Laptop' },
-  { name: 'Components', path: '/products?category=Components' },
-  { name: 'Monitor', path: '/products?category=Monitor' },
-  { name: 'Smartphone', path: '/products?category=Smartphone' },
-  { name: 'Gaming', path: '/products?category=Gaming' },
-  { name: 'Others', path: '/products?category=Others' },
+const NAV_LINKS = [
+  { name: 'Products', path: '/products' },
+  { name: 'Top Picks', path: '/#best-sellers' },
+  { name: 'New Arrivals', path: '/new-arrivals' },
 ];
 
 export function Navbar({ cartCount }: NavbarProps) {
@@ -43,21 +40,15 @@ export function Navbar({ cartCount }: NavbarProps) {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
-            <Link
-              to="/products"
-              className={`text-sm tracking-wide transition-colors ${
-                isActive('/products') ? 'text-black' : 'text-neutral-600 hover:text-black'
-              }`}
-            >
-              All
-            </Link>
-            {NAV_CATEGORIES.map(cat => (
+            {NAV_LINKS.map(link => (
               <Link
-                key={cat.name}
-                to={cat.path}
-                className="text-sm text-neutral-600 hover:text-black tracking-wide transition-colors"
+                key={link.name}
+                to={link.path}
+                className={`text-sm tracking-wide transition-colors ${
+                  isActive(link.path) ? 'text-black' : 'text-neutral-600 hover:text-black'
+                }`}
               >
-                {cat.name}
+                {link.name}
               </Link>
             ))}
           </div>
@@ -151,12 +142,9 @@ export function Navbar({ cartCount }: NavbarProps) {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-neutral-200">
             <div className="flex flex-col gap-4">
-              <Link to="/products" onClick={() => setIsMenuOpen(false)} className="text-sm text-neutral-600 hover:text-black tracking-wide transition-colors">
-                All Products
-              </Link>
-              {NAV_CATEGORIES.map(cat => (
-                <Link key={cat.name} to={cat.path} onClick={() => setIsMenuOpen(false)} className="text-sm text-neutral-600 hover:text-black tracking-wide transition-colors">
-                  {cat.name}
+              {NAV_LINKS.map(link => (
+                <Link key={link.name} to={link.path} onClick={() => setIsMenuOpen(false)} className="text-sm text-neutral-600 hover:text-black tracking-wide transition-colors">
+                  {link.name}
                 </Link>
               ))}
               {!user && (
