@@ -403,11 +403,31 @@ function OrdersTab() {
 
   const fetchOrders = async () => {
     setLoading(true);
-    const { data } = await supabase
+
+    const { data: ordersData } = await supabase
       .from('orders')
-      .select('*, profiles(email, full_name), order_items(id, quantity, unit_price, products(name))')
+      .select('*, order_items(id, quantity, unit_price, products(name))')
       .order('created_at', { ascending: false });
-    setOrders((data as OrderWithDetails[]) || []);
+
+    if (!ordersData || ordersData.length === 0) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
+
+    const userIds = [...new Set(ordersData.map((o: any) => o.user_id))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', userIds);
+
+    const profileMap = Object.fromEntries(
+      (profiles || []).map((p: any) => [p.id, p])
+    );
+
+    setOrders(
+      ordersData.map((o: any) => ({ ...o, profiles: profileMap[o.user_id] || null })) as OrderWithDetails[]
+    );
     setLoading(false);
   };
 
