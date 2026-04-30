@@ -100,6 +100,7 @@ function ImageUploader({
   onChange: (urls: string[]) => void;
 }) {
   const [uploading, setUploading] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
 
   const uploadFile = async (file: File): Promise<string | null> => {
     const ext = file.name.split('.').pop();
@@ -120,6 +121,13 @@ function ImageUploader({
     }
     onChange([...images, ...urls]);
     setUploading(false);
+  };
+
+  const addUrl = () => {
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+    onChange([...images, trimmed]);
+    setUrlInput('');
   };
 
   const remove = (idx: number) => onChange(images.filter((_, i) => i !== idx));
@@ -150,12 +158,31 @@ function ImageUploader({
         </div>
       )}
 
-      {/* Upload button */}
+      {/* Upload file */}
       <label className={`flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-neutral-300 rounded-lg cursor-pointer hover:border-black transition-colors text-sm text-neutral-500 hover:text-black ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-        {uploading ? 'Uploading...' : 'Upload photos'}
+        {uploading ? 'Uploading...' : 'Upload from file'}
         <input type="file" accept="image/*" multiple className="hidden" onChange={e => handleFiles(e.target.files)} />
       </label>
+
+      {/* Add by URL */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={urlInput}
+          onChange={e => setUrlInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addUrl()}
+          placeholder="Or paste an image URL..."
+          className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-black transition-colors"
+        />
+        <button
+          onClick={addUrl}
+          disabled={!urlInput.trim()}
+          className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Add
+        </button>
+      </div>
     </div>
   );
 }
