@@ -81,7 +81,8 @@ export function Cart() {
         order_id: orderId,
         product_id: item.id,
         quantity: item.quantity,
-        unit_price: item.price
+        unit_price: item.price,
+        variant_index: item.variantIndex ?? null,
       }))
     );
 

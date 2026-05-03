@@ -1,34 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../lib/AuthContext';
 import { CheckCircle, Package, Loader2 } from 'lucide-react';
 
 export function CheckoutSuccess() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
   const orderId = searchParams.get('order_id');
+  const confirmed = useRef(false);
 
   useEffect(() => {
-    if (orderId && user) {
+    if (orderId && !confirmed.current) {
+      confirmed.current = true;
       confirmOrder();
-    } else if (!user) {
-      // Wait for auth to load
-      const timer = setTimeout(() => setLoading(false), 3000);
-      return () => clearTimeout(timer);
-    } else {
+    } else if (!orderId) {
       setLoading(false);
     }
-  }, [orderId, user]);
+  }, [orderId]);
 
   const confirmOrder = async () => {
-    await supabase
-      .from('orders')
-      .update({ status: 'processing' })
-      .eq('id', orderId)
-      .eq('user_id', user!.id);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session && orderId) {
+      const { data: order } = await supabase
+        .from('orders')
+        .select('status')
+        .eq('id', orderId)
+        .eq('user_id', session.user.id)
+        .single();
 
+      if (order?.status === 'pending') {
+        await supabase
+          .from('orders')
+          .update({ status: 'processing' })
+          .eq('id', orderId)
+          .eq('user_id', session.user.id);
+      }
+    }
     localStorage.removeItem('cart');
     window.dispatchEvent(new Event('storage'));
     setLoading(false);

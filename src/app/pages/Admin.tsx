@@ -651,6 +651,9 @@ function OrdersTab() {
 
   const updateStatus = async (id: string, status: Order['status']) => {
     await supabase.from('orders').update({ status }).eq('id', id);
+    if (status === 'cancelled') {
+      await supabase.rpc('restore_stock', { order_id_param: id });
+    }
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
   };
 
