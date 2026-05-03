@@ -7,6 +7,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface ProductVariant {
+  color: string;
+  images: string[];
+  stock: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -14,6 +20,7 @@ export interface Product {
   category: string;
   image_url: string;
   images: string[];
+  variants: ProductVariant[];
   description: string;
   featured: boolean;
   stock: number;

@@ -51,18 +51,18 @@ function ShippingTracker({ status }: { status: string }) {
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-normal transition-colors ${
                     done
-                      ? 'bg-black text-white'
-                      : 'bg-neutral-100 text-neutral-400'
-                  } ${active ? 'ring-2 ring-black ring-offset-2' : ''}`}
+                      ? 'bg-black dark:bg-white text-white dark:text-black'
+                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
+                  } ${active ? 'ring-2 ring-black dark:ring-white ring-offset-2 dark:ring-offset-neutral-900' : ''}`}
                 >
                   {done && !active ? '✓' : i + 1}
                 </div>
-                <span className={`text-xs mt-1 tracking-wide whitespace-nowrap ${done ? 'text-black' : 'text-neutral-400'}`}>
+                <span className={`text-xs mt-1 tracking-wide whitespace-nowrap ${done ? 'text-black dark:text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
                   {STATUS_LABELS[step]}
                 </span>
               </div>
               {i < STATUS_STEPS.length - 1 && (
-                <div className={`h-px flex-1 mx-2 mb-4 ${i < currentStep ? 'bg-black' : 'bg-neutral-200'}`} />
+                <div className={`h-px flex-1 mx-2 mb-4 ${i < currentStep ? 'bg-black dark:bg-white' : 'bg-neutral-200 dark:bg-neutral-700'}`} />
               )}
             </div>
           );
@@ -76,28 +76,28 @@ function OrderCard({ order }: { order: OrderWithItems }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden">
       {/* Header */}
       <button
-        className="w-full flex items-center justify-between px-6 py-4 hover:bg-neutral-50 transition-colors text-left"
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-left"
         onClick={() => setOpen(!open)}
       >
         <div className="flex items-center gap-6">
           <div>
-            <p className="text-xs text-neutral-500 mb-0.5">Order</p>
-            <p className="text-sm font-mono text-black">#{order.id.slice(0, 8).toUpperCase()}</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-0.5">Order</p>
+            <p className="text-sm font-mono text-black dark:text-white">#{order.id.slice(0, 8).toUpperCase()}</p>
           </div>
           <div>
-            <p className="text-xs text-neutral-500 mb-0.5">Date</p>
-            <p className="text-sm text-black">{new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-0.5">Date</p>
+            <p className="text-sm text-black dark:text-white">{new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
           </div>
           <div>
-            <p className="text-xs text-neutral-500 mb-0.5">Total</p>
-            <p className="text-sm font-normal text-black">${order.total.toFixed(2)}</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-0.5">Total</p>
+            <p className="text-sm font-normal text-black dark:text-white">${order.total.toFixed(2)}</p>
           </div>
           <div>
-            <p className="text-xs text-neutral-500 mb-0.5">Items</p>
-            <p className="text-sm text-black">{order.order_items.length}</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-0.5">Items</p>
+            <p className="text-sm text-black dark:text-white">{order.order_items.length}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -110,19 +110,19 @@ function OrderCard({ order }: { order: OrderWithItems }) {
 
       {/* Expanded */}
       {open && (
-        <div className="border-t border-neutral-200 px-6 py-5">
+        <div className="border-t border-neutral-200 dark:border-neutral-800 px-6 py-5">
           {/* Shipping tracker */}
-          <h4 className="text-xs text-neutral-500 tracking-wide uppercase mb-2">Shipping Status</h4>
+          <h4 className="text-xs text-neutral-500 dark:text-neutral-400 tracking-wide uppercase mb-2">Shipping Status</h4>
           <ShippingTracker status={order.status} />
 
           {/* Items */}
-          <h4 className="text-xs text-neutral-500 tracking-wide uppercase mt-6 mb-3">Items</h4>
+          <h4 className="text-xs text-neutral-500 dark:text-neutral-400 tracking-wide uppercase mt-6 mb-3">Items</h4>
           <div className="space-y-3">
             {order.order_items.map(item => (
               <div key={item.id} className="flex items-center gap-4">
-                {item.products?.image_url && (
+                {(item.products?.variants?.[0]?.images?.[0] || item.products?.image_url) && (
                   <img
-                    src={item.products.image_url}
+                    src={item.products!.variants?.[0]?.images?.[0] || item.products!.image_url}
                     alt={item.products.name}
                     className="w-12 h-12 object-cover rounded-lg bg-neutral-100 flex-shrink-0"
                   />
@@ -131,16 +131,16 @@ function OrderCard({ order }: { order: OrderWithItems }) {
                   {item.products ? (
                     <Link
                       to={`/product/${item.product_id}`}
-                      className="text-sm text-black hover:underline truncate block"
+                      className="text-sm text-black dark:text-white hover:underline truncate block"
                     >
                       {item.products.name}
                     </Link>
                   ) : (
                     <p className="text-sm text-neutral-500">Product no longer available</p>
                   )}
-                  <p className="text-xs text-neutral-500">Qty: {item.quantity} · ${item.unit_price.toFixed(2)} each</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Qty: {item.quantity} · ${item.unit_price.toFixed(2)} each</p>
                 </div>
-                <p className="text-sm font-normal text-black flex-shrink-0">
+                <p className="text-sm font-normal text-black dark:text-white flex-shrink-0">
                   ${(item.quantity * item.unit_price).toFixed(2)}
                 </p>
               </div>
@@ -148,8 +148,8 @@ function OrderCard({ order }: { order: OrderWithItems }) {
           </div>
 
           {/* Total */}
-          <div className="mt-4 pt-4 border-t border-neutral-100 flex justify-end">
-            <p className="text-sm text-black">Total: <span className="font-normal">${order.total.toFixed(2)}</span></p>
+          <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800 flex justify-end">
+            <p className="text-sm text-black dark:text-white">Total: <span className="font-normal">${order.total.toFixed(2)}</span></p>
           </div>
         </div>
       )}
@@ -179,6 +179,7 @@ export function Account() {
       .from('orders')
       .select('*, order_items(*, products(*))')
       .eq('user_id', user!.id)
+      .neq('status', 'awaiting_payment')
       .order('created_at', { ascending: false });
 
     setOrders((data as OrderWithItems[]) || []);
@@ -187,20 +188,20 @@ export function Account() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center dark:bg-neutral-950">
         <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-4xl font-light tracking-tight text-black mb-10">My Account</h1>
+        <h1 className="text-4xl font-light tracking-tight text-black dark:text-white mb-10">My Account</h1>
 
         {/* Profile card */}
-        <div className="bg-white border border-neutral-200 rounded-xl p-6 mb-8">
-          <h2 className="text-sm font-normal tracking-wide text-neutral-500 uppercase mb-4">Profile</h2>
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 mb-8">
+          <h2 className="text-sm font-normal tracking-wide text-neutral-500 dark:text-neutral-400 uppercase mb-4">Profile</h2>
           <div className="flex flex-col sm:flex-row gap-6">
             <div className="w-14 h-14 bg-black rounded-full flex items-center justify-center flex-shrink-0">
               <User className="w-7 h-7 text-white" />
@@ -208,11 +209,11 @@ export function Account() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-neutral-400" />
-                <span className="text-sm text-black">{profile?.full_name || '—'}</span>
+                <span className="text-sm text-black dark:text-white">{profile?.full_name || '—'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-neutral-400" />
-                <span className="text-sm text-black">{user?.email}</span>
+                <span className="text-sm text-black dark:text-white">{user?.email}</span>
               </div>
               {profile?.role === 'admin' && (
                 <div className="flex items-center gap-2">
@@ -225,7 +226,7 @@ export function Account() {
         </div>
 
         {/* Orders */}
-        <h2 className="text-sm font-normal tracking-wide text-neutral-500 uppercase mb-4">
+        <h2 className="text-sm font-normal tracking-wide text-neutral-500 dark:text-neutral-400 uppercase mb-4">
           Order History
         </h2>
 
@@ -234,12 +235,12 @@ export function Account() {
             <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
           </div>
         ) : orders.length === 0 ? (
-          <div className="bg-white border border-neutral-200 rounded-xl py-16 text-center">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl py-16 text-center">
             <Package className="w-12 h-12 text-neutral-200 mx-auto mb-4" />
-            <p className="text-neutral-500 text-sm mb-6">You haven't placed any orders yet</p>
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-6">You haven't placed any orders yet</p>
             <Link
               to="/products"
-              className="text-sm text-black hover:underline"
+              className="text-sm text-black dark:text-white hover:underline"
             >
               Start shopping →
             </Link>

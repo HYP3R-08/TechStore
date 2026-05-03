@@ -17,7 +17,7 @@ export function Button({
   const variants = {
     primary: 'bg-black text-white hover:bg-neutral-800',
     secondary: 'bg-neutral-100 text-black hover:bg-neutral-200',
-    outline: 'border border-neutral-300 text-black hover:border-black'
+    outline: 'border border-neutral-300 dark:border-neutral-600 text-black dark:text-white hover:border-black dark:hover:border-white'
   };
 
   return (

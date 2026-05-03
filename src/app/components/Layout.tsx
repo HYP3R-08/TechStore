@@ -26,7 +26,7 @@ export function Layout() {
   }, [location]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-neutral-950">
       <Navbar cartCount={cartCount} />
       <main className="pt-16">
         <Outlet />
@@ -57,24 +57,24 @@ export function Layout() {
             <div>
               <h4 className="text-sm font-normal tracking-wide mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-neutral-400">
-                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Shipping Info</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Returns</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Technical Support</a></li>
+                <li><a href="/support#contact" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="/support#shipping" className="hover:text-white transition-colors">Shipping Info</a></li>
+                <li><a href="/support#returns" className="hover:text-white transition-colors">Returns</a></li>
+                <li><a href="/support#technical-support" className="hover:text-white transition-colors">Technical Support</a></li>
               </ul>
             </div>
             <div>
               <h4 className="text-sm font-normal tracking-wide mb-4">Company</h4>
               <ul className="space-y-2 text-sm text-neutral-400">
-                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="/auth" className="hover:text-white transition-colors">My Account</a></li>
+                <li><a href="/company#about" className="hover:text-white transition-colors">About</a></li>
+                <li><a href="/company#privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="/company#terms" className="hover:text-white transition-colors">Terms of Service</a></li>
               </ul>
             </div>
           </div>
           <div className="mt-12 pt-8 border-t border-neutral-800 text-center text-sm text-neutral-500">
             © 2026 TechStore. All rights reserved.
+            Site Created By Pennino Cristian Francesco
           </div>
         </div>
       </footer>
