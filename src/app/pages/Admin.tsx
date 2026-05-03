@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { supabase, Product, ProductVariant, Order, Profile } from '../../lib/supabase';
+import { supabase, Product, ProductVariant, Order, Profile, ShippingAddress } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import {
   Plus, Edit2, Trash2, LogOut, Loader2, Package, ShoppingBag, Users, X,
@@ -16,6 +16,7 @@ type Tab = 'products' | 'orders' | 'users';
 
 type OrderWithDetails = Order & {
   profiles?: { email: string; full_name: string | null };
+  shipping_address?: ShippingAddress | null;
   order_items?: Array<{
     id: string;
     quantity: number;
@@ -592,15 +593,40 @@ function OrderRow({ order, onUpdate, onDelete, onMarkShipped }: {
       {open && (
         <tr className="bg-neutral-50 dark:bg-neutral-800">
           <td colSpan={6} className="px-6 py-4">
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-3">Order Items</p>
-            <div className="space-y-2">
-              {order.order_items?.map(item => (
-                <div key={item.id} className="flex items-center justify-between text-sm">
-                  <span className="text-black dark:text-white">{item.products?.name || 'Unknown product'}</span>
-                  <span className="text-neutral-500 dark:text-neutral-400">×{item.quantity} · ${item.unit_price.toFixed(2)} each</span>
-                  <span className="text-black dark:text-white font-normal">${(item.quantity * item.unit_price).toFixed(2)}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-3">Order Items</p>
+                <div className="space-y-2">
+                  {order.order_items?.map(item => (
+                    <div key={item.id} className="flex items-center justify-between text-sm">
+                      <span className="text-black dark:text-white">{item.products?.name || 'Unknown product'}</span>
+                      <span className="text-neutral-500 dark:text-neutral-400">×{item.quantity} · ${item.unit_price.toFixed(2)} each</span>
+                      <span className="text-black dark:text-white font-normal">${(item.quantity * item.unit_price).toFixed(2)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+              {order.shipping_address && (
+                <div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-3">Shipping Address</p>
+                  <div className="text-sm text-black dark:text-white space-y-0.5">
+                    {order.shipping_address.name && <p className="font-normal">{order.shipping_address.name}</p>}
+                    {order.shipping_address.phone && <p className="text-neutral-500 dark:text-neutral-400">{order.shipping_address.phone}</p>}
+                    {order.shipping_address.email && <p className="text-neutral-500 dark:text-neutral-400">{order.shipping_address.email}</p>}
+                    {order.shipping_address.address && (
+                      <div className="pt-1 space-y-0.5">
+                        <p>{order.shipping_address.address.line1}</p>
+                        {order.shipping_address.address.line2 && <p>{order.shipping_address.address.line2}</p>}
+                        <p>
+                          {[order.shipping_address.address.city, order.shipping_address.address.state, order.shipping_address.address.postal_code]
+                            .filter(Boolean).join(', ')}
+                        </p>
+                        <p className="text-neutral-500 dark:text-neutral-400">{order.shipping_address.address.country}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </td>
         </tr>

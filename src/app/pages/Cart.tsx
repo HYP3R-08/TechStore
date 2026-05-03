@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '../components/Button';
 import { Trash2, ArrowLeft, ShoppingCart } from 'lucide-react';
-import { supabase, CartItem } from '../../lib/supabase';
+import { CartItem } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 
 export function Cart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [checkingOut, setCheckingOut] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -36,64 +35,12 @@ export function Cart() {
     window.dispatchEvent(new Event('storage'));
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!user) {
       navigate('/auth');
       return;
     }
-    setCheckingOut(true);
-
-    const orderId = crypto.randomUUID();
-
-    const { data: fn, error: fnError } = await supabase.functions.invoke('create-checkout-session', {
-      body: {
-        cartItems: cartItems.map(i => ({
-          name: i.name,
-          price: i.price,
-          quantity: i.quantity,
-          image_url: i.image_url,
-        })),
-        orderId,
-        origin: window.location.origin,
-      },
-    });
-
-    if (fnError || !fn?.url) {
-      alert('Error connecting to payment. Please try again.');
-      setCheckingOut(false);
-      return;
-    }
-
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({ id: orderId, user_id: user.id, status: 'pending', total })
-      .select()
-      .single();
-
-    if (orderError || !order) {
-      alert('Error placing order. Please try again.');
-      setCheckingOut(false);
-      return;
-    }
-
-    const { error: itemsError } = await supabase.from('order_items').insert(
-      cartItems.map(item => ({
-        order_id: orderId,
-        product_id: item.id,
-        quantity: item.quantity,
-        unit_price: item.price,
-        variant_index: item.variantIndex ?? null,
-      }))
-    );
-
-    if (itemsError) {
-      await supabase.from('orders').delete().eq('id', orderId);
-      alert('Error saving order items. Please try again.');
-      setCheckingOut(false);
-      return;
-    }
-
-    window.location.href = fn.url;
+    navigate('/checkout');
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -218,12 +165,8 @@ export function Cart() {
                 </div>
               </div>
 
-              <Button fullWidth onClick={handleCheckout} disabled={checkingOut}>
-                {checkingOut
-                  ? 'Processing...'
-                  : user
-                  ? 'Proceed to Checkout'
-                  : 'Sign In to Checkout'}
+              <Button fullWidth onClick={handleCheckout}>
+                {user ? 'Proceed to Checkout' : 'Sign In to Checkout'}
               </Button>
 
               {!user && (
