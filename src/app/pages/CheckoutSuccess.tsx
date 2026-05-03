@@ -21,20 +21,12 @@ export function CheckoutSuccess() {
   const confirmOrder = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session && orderId) {
-      const { data: order } = await supabase
+      await supabase
         .from('orders')
-        .select('status')
+        .update({ status: 'processing' })
         .eq('id', orderId)
         .eq('user_id', session.user.id)
-        .single();
-
-      if (order?.status === 'pending') {
-        await supabase
-          .from('orders')
-          .update({ status: 'processing' })
-          .eq('id', orderId)
-          .eq('user_id', session.user.id);
-      }
+        .eq('status', 'pending');
     }
     localStorage.removeItem('cart');
     window.dispatchEvent(new Event('storage'));

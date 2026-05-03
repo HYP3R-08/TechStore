@@ -45,12 +45,27 @@ export interface Profile {
   created_at: string;
 }
 
+export interface ShippingAddress {
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: {
+    line1: string | null;
+    line2: string | null;
+    city: string | null;
+    state: string | null;
+    postal_code: string | null;
+    country: string | null;
+  } | null;
+}
+
 export interface Order {
   id: string;
   user_id: string;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   total: number;
   tracking_url?: string;
+  shipping_address?: ShippingAddress | null;
   created_at: string;
   profiles?: Profile;
   order_items?: OrderItem[];

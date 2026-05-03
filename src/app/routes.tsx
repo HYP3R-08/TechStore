@@ -10,6 +10,7 @@ import { Account } from './pages/Account';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { CheckoutSuccess } from './pages/CheckoutSuccess';
+import { Checkout } from './pages/Checkout';
 import { NewArrivals } from './pages/NewArrivals';
 import { Support } from './pages/Support';
 import { Company } from './pages/Company';
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: 'account', Component: Account },
       { path: 'forgot-password', Component: ForgotPassword },
       { path: 'reset-password', Component: ResetPassword },
+      { path: 'checkout', Component: Checkout },
       { path: 'checkout/success', Component: CheckoutSuccess },
       { path: 'new-arrivals', Component: NewArrivals },
       { path: 'support', Component: Support },
