@@ -109,7 +109,7 @@ export function Home() {
   useEffect(() => {
     async function loadAll() {
       const [salesRes, productsRes, featuredRes] = await Promise.all([
-        supabase.from('order_items').select('product_id, quantity'),
+        supabase.rpc('get_product_sales'),
         supabase.from('products').select('*'),
         supabase.from('products').select('*').eq('featured', true).gt('stock', 0),
       ]);
@@ -119,7 +119,7 @@ export function Home() {
       if (products.length > 0) {
         const soldMap: Record<string, number> = {};
         (salesRes.data || []).forEach((item: any) => {
-          soldMap[item.product_id] = (soldMap[item.product_id] || 0) + item.quantity;
+          soldMap[item.product_id] = Number(item.total_sold);
         });
 
         const withSales: ProductWithSales[] = products.map(p => {
@@ -152,11 +152,15 @@ export function Home() {
       {/* Hero */}
       <section className="relative h-[90vh] flex items-center justify-center bg-neutral-900">
         <div className="absolute inset-0">
-          <img
-            src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1920&q=80"
-            alt="Hero"
-            className="w-full h-full object-cover opacity-40"
-          />
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover opacity-60"
+          >
+            <source src="https://hpjrimwzwxlkchirygpj.supabase.co/storage/v1/object/public/product-images/11041433-hd_1920_1080_30fps.mp4" type="video/mp4" />
+          </video>
           <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/50 to-neutral-900/80" />
         </div>
 

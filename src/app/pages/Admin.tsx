@@ -477,7 +477,12 @@ const STATUS_LABELS: Record<string, string> = {
   shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled',
 };
 
-function OrderRow({ order, onUpdate }: { order: OrderWithDetails; onUpdate: (id: string, status: Order['status']) => void }) {
+function OrderRow({ order, onUpdate, onDelete, onMarkShipped }: {
+  order: OrderWithDetails;
+  onUpdate: (id: string, status: Order['status']) => void;
+  onDelete: (id: string) => void;
+  onMarkShipped: (order: OrderWithDetails) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -535,7 +540,7 @@ function OrderRow({ order, onUpdate }: { order: OrderWithDetails; onUpdate: (id:
             {order.status === 'processing' && (
               <>
                 <button
-                  onClick={() => act('shipped')}
+                  onClick={() => onMarkShipped(order)}
                   disabled={loading}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 text-xs rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50"
                 >
@@ -560,6 +565,16 @@ function OrderRow({ order, onUpdate }: { order: OrderWithDetails; onUpdate: (id:
               >
                 <PackageCheck className="w-3.5 h-3.5" />
                 Mark Delivered
+              </button>
+            )}
+            {order.status === 'cancelled' && (
+              <button
+                onClick={() => onDelete(order.id)}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
               </button>
             )}
             {/* Expand/collapse items */}
@@ -594,9 +609,12 @@ function OrderRow({ order, onUpdate }: { order: OrderWithDetails; onUpdate: (id:
   );
 }
 
+type ShippingModal = { order: OrderWithDetails; trackingUrl: string; sending: boolean } | null;
+
 function OrdersTab() {
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [shippingModal, setShippingModal] = useState<ShippingModal>(null);
 
   useEffect(() => { fetchOrders(); }, []);
 
@@ -636,12 +654,79 @@ function OrdersTab() {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
   };
 
+  const deleteOrder = async (id: string) => {
+    if (!confirm('Delete this cancelled order permanently?')) return;
+    const { error: itemsError } = await supabase.from('order_items').delete().eq('order_id', id);
+    if (itemsError) { alert('Error deleting order items: ' + itemsError.message); return; }
+    const { error: orderError } = await supabase.from('orders').delete().eq('id', id);
+    if (orderError) { alert('Error deleting order: ' + orderError.message); return; }
+    setOrders(prev => prev.filter(o => o.id !== id));
+  };
+
+  const markShipped = (order: OrderWithDetails) => {
+    setShippingModal({ order, trackingUrl: '', sending: false });
+  };
+
+  const confirmShip = async () => {
+    if (!shippingModal) return;
+    const { order, trackingUrl } = shippingModal;
+    setShippingModal(m => m && { ...m, sending: true });
+
+    await supabase.from('orders').update({ status: 'shipped', tracking_url: trackingUrl }).eq('id', order.id);
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'shipped' as const, tracking_url: trackingUrl } : o));
+
+    await supabase.functions.invoke('send-shipping-email', {
+      body: {
+        customerEmail: order.profiles?.email,
+        customerName: order.profiles?.full_name,
+        orderId: order.id,
+        trackingUrl,
+      },
+    });
+
+    setShippingModal(null);
+  };
+
   const pendingCount = orders.filter(o => o.status === 'pending').length;
 
   return loading ? (
     <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>
   ) : (
     <div className="space-y-4">
+      {/* Shipping modal */}
+      {shippingModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-8 max-w-md w-full shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-light tracking-tight text-black dark:text-white">Mark as Shipped</h2>
+              <button onClick={() => setShippingModal(null)}>
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            </div>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
+              An email with the tracking link will be sent to{' '}
+              <span className="text-black dark:text-white">{shippingModal.order.profiles?.email}</span>.
+            </p>
+            <div className="space-y-2 mb-6">
+              <label className="block text-sm text-neutral-700 dark:text-neutral-300 tracking-wide">Tracking URL</label>
+              <input
+                type="url"
+                value={shippingModal.trackingUrl}
+                onChange={e => setShippingModal(m => m && { ...m, trackingUrl: e.target.value })}
+                placeholder="https://track.carrier.com/..."
+                className="w-full px-4 py-3 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-lg text-sm focus:outline-none focus:border-black dark:focus:border-neutral-400 transition-colors"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={confirmShip} className="flex-1" disabled={!shippingModal.trackingUrl.trim() || shippingModal.sending}>
+                {shippingModal.sending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Sending...</> : <><Truck className="w-4 h-4 mr-2" />Confirm & Send Email</>}
+              </Button>
+              <Button variant="outline" onClick={() => setShippingModal(null)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Pending alert */}
       {pendingCount > 0 && (
         <div className="flex items-center gap-3 px-5 py-4 bg-yellow-50 border border-yellow-200 rounded-xl">
@@ -664,7 +749,7 @@ function OrdersTab() {
             </thead>
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
               {orders.map(order => (
-                <OrderRow key={order.id} order={order} onUpdate={updateStatus} />
+                <OrderRow key={order.id} order={order} onUpdate={updateStatus} onDelete={deleteOrder} onMarkShipped={markShipped} />
               ))}
             </tbody>
           </table>

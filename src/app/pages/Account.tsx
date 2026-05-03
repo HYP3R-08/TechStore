@@ -180,6 +180,7 @@ export function Account() {
       .select('*, order_items(*, products(*))')
       .eq('user_id', user!.id)
       .neq('status', 'awaiting_payment')
+      .neq('status', 'cancelled')
       .order('created_at', { ascending: false });
 
     setOrders((data as OrderWithItems[]) || []);
