@@ -60,18 +60,18 @@ export function Products() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-12">
-          <h1 className="text-4xl md:text-5xl font-light tracking-tight text-black mb-2">
+          <h1 className="text-4xl md:text-5xl font-light tracking-tight text-black dark:text-white mb-2">
             All Products
           </h1>
-          <p className="text-neutral-600 text-sm tracking-wide">
+          <p className="text-neutral-600 dark:text-neutral-400 text-sm tracking-wide">
             {loading ? 'Loading...' : `${filteredAndSortedProducts.length} items`}
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 pb-6 border-b border-neutral-200">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 pb-6 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex flex-wrap gap-2">
             {categories.map(category => (
               <button
@@ -79,8 +79,8 @@ export function Products() {
                 onClick={() => handleCategoryChange(category)}
                 className={`px-6 py-2 rounded-full text-sm tracking-wide transition-all ${
                   selectedCategory === category
-                    ? 'bg-black text-white'
-                    : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                    ? 'bg-black text-white dark:bg-white dark:text-black'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                 }`}
               >
                 {category}
@@ -92,7 +92,7 @@ export function Products() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="appearance-none px-6 py-2 pr-10 bg-white border border-neutral-300 rounded-full text-sm text-neutral-700 focus:outline-none focus:border-black transition-colors cursor-pointer"
+              className="appearance-none px-6 py-2 pr-10 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-full text-sm text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-black dark:focus:border-neutral-400 transition-colors cursor-pointer"
             >
               <option value="featured">Featured</option>
               <option value="price-low">Price: Low to High</option>

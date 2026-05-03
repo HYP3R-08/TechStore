@@ -11,6 +11,8 @@ import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { CheckoutSuccess } from './pages/CheckoutSuccess';
 import { NewArrivals } from './pages/NewArrivals';
+import { Support } from './pages/Support';
+import { Company } from './pages/Company';
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +30,8 @@ export const router = createBrowserRouter([
       { path: 'reset-password', Component: ResetPassword },
       { path: 'checkout/success', Component: CheckoutSuccess },
       { path: 'new-arrivals', Component: NewArrivals },
+      { path: 'support', Component: Support },
+      { path: 'company', Component: Company },
       {
         path: '*',
         Component: () => (

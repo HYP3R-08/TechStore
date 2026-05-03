@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { supabase, Product, Order, Profile } from '../../lib/supabase';
+import { supabase, Product, ProductVariant, Order, Profile } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import {
   Plus, Edit2, Trash2, LogOut, Loader2, Package, ShoppingBag, Users, X,
@@ -49,12 +49,12 @@ export function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-4xl font-light tracking-tight text-black mb-1">Admin Dashboard</h1>
-            <p className="text-neutral-600 text-sm tracking-wide">TechStore management panel</p>
+            <h1 className="text-4xl font-light tracking-tight text-black dark:text-white mb-1">Admin Dashboard</h1>
+            <p className="text-neutral-600 dark:text-neutral-400 text-sm tracking-wide">TechStore management panel</p>
           </div>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" />
@@ -74,8 +74,8 @@ export function Admin() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-6 py-3 text-sm tracking-wide transition-colors border-b-2 -mb-px ${
                 activeTab === tab.id
-                  ? 'border-black text-black'
-                  : 'border-transparent text-neutral-500 hover:text-black'
+                  ? 'border-black dark:border-white text-black dark:text-white'
+                  : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
               }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -134,15 +134,15 @@ function ImageUploader({
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm text-neutral-700 tracking-wide">
-        Photos {images.length > 0 && <span className="text-neutral-400">({images.length} — first is cover)</span>}
+      <label className="block text-sm text-neutral-700 dark:text-neutral-300 tracking-wide">
+        Photos {images.length > 0 && <span className="text-neutral-400 dark:text-neutral-500">({images.length} — first is cover)</span>}
       </label>
 
       {/* Preview grid */}
       {images.length > 0 && (
         <div className="grid grid-cols-4 gap-2">
           {images.map((url, i) => (
-            <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-neutral-100 group">
+            <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 group">
               <img src={url} alt="" className="w-full h-full object-cover" />
               {i === 0 && (
                 <span className="absolute top-1 left-1 bg-black text-white text-[10px] px-1.5 py-0.5 rounded">Cover</span>
@@ -159,7 +159,7 @@ function ImageUploader({
       )}
 
       {/* Upload file */}
-      <label className={`flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-neutral-300 rounded-lg cursor-pointer hover:border-black transition-colors text-sm text-neutral-500 hover:text-black ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+      <label className={`flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-lg cursor-pointer hover:border-black dark:hover:border-white transition-colors text-sm text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
         {uploading ? 'Uploading...' : 'Upload from file'}
         <input type="file" accept="image/*" multiple className="hidden" onChange={e => handleFiles(e.target.files)} />
@@ -173,7 +173,7 @@ function ImageUploader({
           onChange={e => setUrlInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && addUrl()}
           placeholder="Or paste an image URL..."
-          className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-black transition-colors"
+          className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-lg text-sm focus:outline-none focus:border-black dark:focus:border-neutral-400 transition-colors"
         />
         <button
           onClick={addUrl}
@@ -181,6 +181,77 @@ function ImageUploader({
           className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function VariantsEditor({
+  variants,
+  onChange,
+}: {
+  variants: ProductVariant[];
+  onChange: (v: ProductVariant[]) => void;
+}) {
+  const [newColor, setNewColor] = useState('');
+
+  const addVariant = () => {
+    const trimmed = newColor.trim();
+    if (!trimmed) return;
+    onChange([...variants, { color: trimmed, images: [], stock: 0 }]);
+    setNewColor('');
+  };
+
+  const removeVariant = (idx: number) => onChange(variants.filter((_, i) => i !== idx));
+
+  const updateVariant = (idx: number, patch: Partial<ProductVariant>) =>
+    onChange(variants.map((v, i) => (i === idx ? { ...v, ...patch } : v)));
+
+  return (
+    <div className="space-y-4">
+      <label className="block text-sm text-neutral-700 dark:text-neutral-300 tracking-wide">Color Variants</label>
+
+      {variants.map((variant, idx) => (
+        <div key={idx} className="border border-neutral-200 dark:border-neutral-700 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-normal text-black dark:text-white flex-1">{variant.color}</span>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-neutral-500 dark:text-neutral-400 whitespace-nowrap">Stock</label>
+              <input
+                type="number"
+                min={0}
+                value={variant.stock}
+                onChange={e => updateVariant(idx, { stock: Number(e.target.value) })}
+                className="w-20 px-2 py-1 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-black transition-colors text-center"
+              />
+            </div>
+            <button
+              onClick={() => removeVariant(idx)}
+              className="p-1 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4 text-red-500" />
+            </button>
+          </div>
+          <ImageUploader images={variant.images} onChange={imgs => updateVariant(idx, { images: imgs })} />
+        </div>
+      ))}
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={newColor}
+          onChange={e => setNewColor(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addVariant()}
+          placeholder="Color name (e.g. Space Gray, Midnight Blue)"
+          className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-lg text-sm focus:outline-none focus:border-black dark:focus:border-neutral-400 transition-colors"
+        />
+        <button
+          onClick={addVariant}
+          disabled={!newColor.trim()}
+          className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Add Color
         </button>
       </div>
     </div>
@@ -207,9 +278,13 @@ function ProductsTab() {
     setSaving(true);
     const images = editingProduct.images || [];
     const image_url = images[0] || editingProduct.image_url || '';
+    const variants = editingProduct.variants || [];
+    const stock = variants.length > 0
+      ? variants.reduce((sum, v) => sum + (v.stock || 0), 0)
+      : (editingProduct.stock || 0);
     if (editingProduct.id) {
       const { id, created_at, ...updates } = editingProduct as Product;
-      await supabase.from('products').update({ ...updates, image_url, images }).eq('id', id);
+      await supabase.from('products').update({ ...updates, image_url, images, variants, stock }).eq('id', id);
     } else {
       await supabase.from('products').insert({
         name: editingProduct.name || '',
@@ -217,9 +292,10 @@ function ProductsTab() {
         category: editingProduct.category || '',
         image_url,
         images,
+        variants,
+        stock,
         description: editingProduct.description || '',
         featured: editingProduct.featured || false,
-        stock: editingProduct.stock || 0,
         brand: editingProduct.brand || '',
       });
     }
@@ -230,7 +306,11 @@ function ProductsTab() {
   };
 
   const openEdit = (product?: Product) => {
-    setEditingProduct(product ? { ...product, images: product.images?.length ? product.images : (product.image_url ? [product.image_url] : []) } : { images: [] });
+    setEditingProduct(product ? {
+      ...product,
+      images: product.images?.length ? product.images : (product.image_url ? [product.image_url] : []),
+      variants: product.variants || [],
+    } : { images: [], variants: [] });
     setIsEditing(true);
   };
 
@@ -251,9 +331,9 @@ function ProductsTab() {
       {/* Edit Modal */}
       {isEditing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-light tracking-tight text-black">
+              <h2 className="text-2xl font-light tracking-tight text-black dark:text-white">
                 {editingProduct.id ? 'Edit Product' : 'Add Product'}
               </h2>
               <button onClick={() => { setIsEditing(false); setEditingProduct({}); }}>
@@ -266,14 +346,23 @@ function ProductsTab() {
               <Input label="Brand" value={editingProduct.brand || ''} onChange={e => setEditingProduct({ ...editingProduct, brand: e.target.value })} placeholder="Apple" />
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Price ($)" type="number" value={editingProduct.price || ''} onChange={e => setEditingProduct({ ...editingProduct, price: Number(e.target.value) })} placeholder="999" />
-                <Input label="Stock" type="number" value={editingProduct.stock || ''} onChange={e => setEditingProduct({ ...editingProduct, stock: Number(e.target.value) })} placeholder="10" />
+                {(editingProduct.variants?.length ?? 0) === 0 ? (
+                  <Input label="Stock" type="number" value={editingProduct.stock || ''} onChange={e => setEditingProduct({ ...editingProduct, stock: Number(e.target.value) })} placeholder="10" />
+                ) : (
+                  <div className="space-y-2">
+                    <label className="block text-sm text-neutral-700 dark:text-neutral-300 tracking-wide">Stock</label>
+                    <p className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-500 dark:text-neutral-400">
+                      Managed per variant
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
-                <label className="block text-sm text-neutral-700 tracking-wide">Category</label>
+                <label className="block text-sm text-neutral-700 dark:text-neutral-300 tracking-wide">Category</label>
                 <select
                   value={editingProduct.category || ''}
                   onChange={e => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-black transition-colors"
+                  className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-neutral-400 transition-colors"
                 >
                   <option value="">Select category</option>
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -283,12 +372,16 @@ function ProductsTab() {
                 images={editingProduct.images || []}
                 onChange={imgs => setEditingProduct({ ...editingProduct, images: imgs })}
               />
+              <VariantsEditor
+                variants={editingProduct.variants || []}
+                onChange={v => setEditingProduct({ ...editingProduct, variants: v })}
+              />
               <div className="space-y-2">
-                <label className="block text-sm text-neutral-700 tracking-wide">Description</label>
+                <label className="block text-sm text-neutral-700 dark:text-neutral-300 tracking-wide">Description</label>
                 <textarea
                   value={editingProduct.description || ''}
                   onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-black transition-colors resize-none"
+                  className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-neutral-400 transition-colors resize-none"
                   rows={3}
                 />
               </div>
@@ -300,7 +393,7 @@ function ProductsTab() {
                   onChange={e => setEditingProduct({ ...editingProduct, featured: e.target.checked })}
                   className="w-4 h-4 rounded border-neutral-300"
                 />
-                <label htmlFor="featured" className="text-sm text-neutral-700">Featured product</label>
+                <label htmlFor="featured" className="text-sm text-neutral-700 dark:text-neutral-300">Featured product</label>
               </div>
             </div>
 
@@ -319,37 +412,37 @@ function ProductsTab() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>
       ) : (
-        <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-neutral-50 border-b border-neutral-200">
+              <thead className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                 <tr>
                   {['Product', 'Brand', 'Category', 'Price', 'Stock', 'Featured', ''].map(h => (
-                    <th key={h} className="text-left px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide">{h}</th>
+                    <th key={h} className="text-left px-6 py-4 text-sm font-normal text-neutral-700 dark:text-neutral-300 tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-200">
+              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
                 {products.map(product => (
-                  <tr key={product.id} className="hover:bg-neutral-50 transition-colors">
+                  <tr key={product.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <img src={product.image_url} alt={product.name} className="w-10 h-10 object-cover rounded bg-neutral-100" />
-                        <span className="text-sm text-black font-light">{product.name}</span>
+                        <img src={product.variants?.[0]?.images?.[0] || product.image_url} alt={product.name} className="w-10 h-10 object-cover rounded bg-neutral-100" />
+                        <span className="text-sm text-black dark:text-white font-light">{product.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-neutral-600">{product.brand}</td>
-                    <td className="px-6 py-4 text-sm text-neutral-600">{product.category}</td>
-                    <td className="px-6 py-4 text-sm text-black">${product.price.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-sm text-neutral-600">{product.stock}</td>
+                    <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{product.brand}</td>
+                    <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{product.category}</td>
+                    <td className="px-6 py-4 text-sm text-black dark:text-white">${product.price.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{product.stock}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs ${product.featured ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-600'}`}>
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs ${product.featured ? 'bg-black text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'}`}>
                         {product.featured ? 'Yes' : 'No'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => openEdit(product)} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
+                        <button onClick={() => openEdit(product)} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors">
                           <Edit2 className="w-4 h-4 text-neutral-600" />
                         </button>
                         <button onClick={() => handleDelete(product.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors">
@@ -362,7 +455,7 @@ function ProductsTab() {
               </tbody>
             </table>
             {products.length === 0 && (
-              <div className="text-center py-16 text-neutral-500 text-sm">No products yet</div>
+              <div className="text-center py-16 text-neutral-500 dark:text-neutral-400 text-sm">No products yet</div>
             )}
           </div>
         </div>
@@ -396,19 +489,19 @@ function OrderRow({ order, onUpdate }: { order: OrderWithDetails; onUpdate: (id:
 
   return (
     <>
-      <tr className={`transition-colors ${order.status === 'pending' ? 'bg-yellow-50/50' : 'hover:bg-neutral-50'}`}>
+      <tr className={`transition-colors ${order.status === 'pending' ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : 'hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}>
         <td className="px-6 py-4">
           <div className="flex items-center gap-2">
             {order.status === 'pending' && <span className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />}
-            <span className="text-sm font-mono text-neutral-600">#{order.id.slice(0, 8).toUpperCase()}</span>
+            <span className="text-sm font-mono text-neutral-600 dark:text-neutral-400">#{order.id.slice(0, 8).toUpperCase()}</span>
           </div>
         </td>
         <td className="px-6 py-4">
-          <div className="text-sm text-black">{order.profiles?.full_name || 'Unknown'}</div>
-          <div className="text-xs text-neutral-500">{order.profiles?.email}</div>
+          <div className="text-sm text-black dark:text-white">{order.profiles?.full_name || 'Unknown'}</div>
+          <div className="text-xs text-neutral-500 dark:text-neutral-400">{order.profiles?.email}</div>
         </td>
-        <td className="px-6 py-4 text-sm text-black font-normal">${order.total.toFixed(2)}</td>
-        <td className="px-6 py-4 text-sm text-neutral-500">
+        <td className="px-6 py-4 text-sm text-black dark:text-white font-normal">${order.total.toFixed(2)}</td>
+        <td className="px-6 py-4 text-sm text-neutral-500 dark:text-neutral-400">
           {new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
         </td>
         <td className="px-6 py-4">
@@ -472,7 +565,7 @@ function OrderRow({ order, onUpdate }: { order: OrderWithDetails; onUpdate: (id:
             {/* Expand/collapse items */}
             <button
               onClick={() => setOpen(!open)}
-              className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
             >
               {open ? <ChevronUp className="w-4 h-4 text-neutral-500" /> : <ChevronDown className="w-4 h-4 text-neutral-500" />}
             </button>
@@ -482,15 +575,15 @@ function OrderRow({ order, onUpdate }: { order: OrderWithDetails; onUpdate: (id:
 
       {/* Expanded items row */}
       {open && (
-        <tr className="bg-neutral-50">
+        <tr className="bg-neutral-50 dark:bg-neutral-800">
           <td colSpan={6} className="px-6 py-4">
-            <p className="text-xs text-neutral-500 uppercase tracking-wide mb-3">Order Items</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-3">Order Items</p>
             <div className="space-y-2">
               {order.order_items?.map(item => (
                 <div key={item.id} className="flex items-center justify-between text-sm">
-                  <span className="text-black">{item.products?.name || 'Unknown product'}</span>
-                  <span className="text-neutral-500">×{item.quantity} · ${item.unit_price.toFixed(2)} each</span>
-                  <span className="text-black font-normal">${(item.quantity * item.unit_price).toFixed(2)}</span>
+                  <span className="text-black dark:text-white">{item.products?.name || 'Unknown product'}</span>
+                  <span className="text-neutral-500 dark:text-neutral-400">×{item.quantity} · ${item.unit_price.toFixed(2)} each</span>
+                  <span className="text-black dark:text-white font-normal">${(item.quantity * item.unit_price).toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -513,6 +606,7 @@ function OrdersTab() {
     const { data: ordersData } = await supabase
       .from('orders')
       .select('*, order_items(id, quantity, unit_price, products(name))')
+      .neq('status', 'awaiting_payment')
       .order('created_at', { ascending: false });
 
     if (!ordersData || ordersData.length === 0) {
@@ -558,24 +652,24 @@ function OrdersTab() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-200">
+            <thead className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
               <tr>
                 {['Order ID', 'Customer', 'Total', 'Date', 'Status', 'Actions'].map(h => (
-                  <th key={h} className={`text-left px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide ${h === 'Actions' ? 'text-right' : ''}`}>{h}</th>
+                  <th key={h} className={`text-left px-6 py-4 text-sm font-normal text-neutral-700 dark:text-neutral-300 tracking-wide ${h === 'Actions' ? 'text-right' : ''}`}>{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-200">
+            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
               {orders.map(order => (
                 <OrderRow key={order.id} order={order} onUpdate={updateStatus} />
               ))}
             </tbody>
           </table>
           {orders.length === 0 && (
-            <div className="text-center py-16 text-neutral-500 text-sm">No orders yet</div>
+            <div className="text-center py-16 text-neutral-500 dark:text-neutral-400 text-sm">No orders yet</div>
           )}
         </div>
       </div>
@@ -604,32 +698,32 @@ function UsersTab() {
   return loading ? (
     <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>
   ) : (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-neutral-50 border-b border-neutral-200">
+          <thead className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
             <tr>
               {['Name', 'Email', 'Role', 'Joined'].map(h => (
-                <th key={h} className="text-left px-6 py-4 text-sm font-normal text-neutral-700 tracking-wide">{h}</th>
+                <th key={h} className="text-left px-6 py-4 text-sm font-normal text-neutral-700 dark:text-neutral-300 tracking-wide">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-200">
+          <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
             {users.map(user => (
-              <tr key={user.id} className="hover:bg-neutral-50 transition-colors">
-                <td className="px-6 py-4 text-sm text-black">{user.full_name || '—'}</td>
-                <td className="px-6 py-4 text-sm text-neutral-600">{user.email}</td>
+              <tr key={user.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                <td className="px-6 py-4 text-sm text-black dark:text-white">{user.full_name || '—'}</td>
+                <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{user.email}</td>
                 <td className="px-6 py-4">
                   <select
                     value={user.role}
                     onChange={e => updateRole(user.id, e.target.value as Profile['role'])}
-                    className="text-xs px-3 py-1 rounded-full border border-neutral-200 cursor-pointer bg-white"
+                    className="text-xs px-3 py-1 rounded-full border border-neutral-200 dark:border-neutral-700 cursor-pointer bg-white dark:bg-neutral-800 dark:text-white"
                   >
                     <option value="user">user</option>
                     <option value="admin">admin</option>
                   </select>
                 </td>
-                <td className="px-6 py-4 text-sm text-neutral-600">
+                <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">
                   {new Date(user.created_at).toLocaleDateString()}
                 </td>
               </tr>
@@ -637,7 +731,7 @@ function UsersTab() {
           </tbody>
         </table>
         {users.length === 0 && (
-          <div className="text-center py-16 text-neutral-500 text-sm">No users yet</div>
+          <div className="text-center py-16 text-neutral-500 dark:text-neutral-400 text-sm">No users yet</div>
         )}
       </div>
     </div>

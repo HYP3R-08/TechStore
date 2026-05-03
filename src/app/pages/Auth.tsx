@@ -41,19 +41,19 @@ export function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl p-8 md:p-12 shadow-sm">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-8 md:p-12 shadow-sm">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
               <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center">
                 <Cpu className="w-6 h-6 text-white" />
               </div>
             </div>
-            <h1 className="text-3xl font-light tracking-tight text-black mb-2">
+            <h1 className="text-3xl font-light tracking-tight text-black dark:text-white mb-2">
               {isLogin ? 'Welcome Back' : 'Create Account'}
             </h1>
-            <p className="text-sm text-neutral-600 tracking-wide">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 tracking-wide">
               {isLogin ? 'Sign in to your TechStore account' : 'Join TechStore today'}
             </p>
           </div>
@@ -103,7 +103,7 @@ export function Auth() {
 
             {isLogin && (
               <div className="flex justify-end -mt-2">
-                <Link to="/forgot-password" className="text-sm text-neutral-500 hover:text-black transition-colors">
+                <Link to="/forgot-password" className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors">
                   Forgot password?
                 </Link>
               </div>
@@ -115,11 +115,11 @@ export function Auth() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button
                 onClick={() => { setIsLogin(!isLogin); setError(''); setMessage(''); }}
-                className="text-black hover:underline font-normal"
+                className="text-black dark:text-white hover:underline font-normal"
               >
                 {isLogin ? 'Sign up' : 'Sign in'}
               </button>
@@ -127,7 +127,7 @@ export function Auth() {
           </div>
 
           <div className="mt-6 text-center">
-            <Link to="/" className="text-sm text-neutral-500 hover:text-black transition-colors">
+            <Link to="/" className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors">
               ← Back to store
             </Link>
           </div>
