@@ -49,12 +49,12 @@ export function ProductDetail() {
   const handleAddToCart = () => {
     if (!product) return;
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItem = cart.find((item: any) => item.id === product.id);
+    const existingItem = cart.find((item: any) => item.id === product.id && item.variantIndex === selectedVariant);
 
     if (existingItem) {
       existingItem.quantity = Math.min(currentStock, existingItem.quantity + quantity);
     } else {
-      cart.push({ ...product, quantity: Math.min(currentStock, quantity) });
+      cart.push({ ...product, quantity: Math.min(currentStock, quantity), variantIndex: selectedVariant });
     }
 
     localStorage.setItem('cart', JSON.stringify(cart));

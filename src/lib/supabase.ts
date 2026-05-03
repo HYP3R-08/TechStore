@@ -1,3 +1,12 @@
+declare global {
+  interface ImportMeta {
+    env: {
+      VITE_SUPABASE_URL: string;
+      VITE_SUPABASE_ANON_KEY: string;
+    };
+  }
+}
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
@@ -58,4 +67,5 @@ export interface OrderItem {
 
 export interface CartItem extends Product {
   quantity: number;
+  variantIndex?: number | null;
 }
