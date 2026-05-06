@@ -277,7 +277,7 @@ export function Checkout() {
                       <p className="text-sm text-black dark:text-white truncate">{item.name}</p>
                       <p className="text-xs text-neutral-500 dark:text-neutral-400">×{item.quantity}</p>
                     </div>
-                    <p className="text-sm text-black dark:text-white">${(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="text-sm text-black dark:text-white">€{(item.price * item.quantity).toFixed(2)}</p>
                   </div>
                 ))}
               </div>
@@ -285,18 +285,18 @@ export function Checkout() {
               <div className="border-t border-neutral-200 dark:border-neutral-700 pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-neutral-600 dark:text-neutral-400">Subtotal</span>
-                  <span className="text-black dark:text-white">${subtotal.toFixed(2)}</span>
+                  <span className="text-black dark:text-white">€{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-neutral-600 dark:text-neutral-400">Shipping</span>
-                  <span className="text-black dark:text-white">{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                  <span className="text-black dark:text-white">{shipping === 0 ? 'Free' : `€${shipping.toFixed(2)}`}</span>
                 </div>
                 {shipping > 0 && (
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Free shipping on orders over $100</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Free shipping on orders over €100</p>
                 )}
                 <div className="flex justify-between text-base pt-3 border-t border-neutral-200 dark:border-neutral-700">
                   <span className="text-black dark:text-white font-normal">Total</span>
-                  <span className="text-black dark:text-white font-normal">${total.toFixed(2)}</span>
+                  <span className="text-black dark:text-white font-normal">€{total.toFixed(2)}</span>
                 </div>
               </div>
             </div>

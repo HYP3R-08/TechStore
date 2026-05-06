@@ -145,7 +145,7 @@ export function ProductDetail() {
               {product.name}
             </h1>
             <p className="text-3xl font-normal text-black dark:text-white mb-2">
-              ${product.price.toLocaleString()}
+              €{product.price.toLocaleString()}
             </p>
             {currentStock > 0 ? (
               <p className="text-sm text-green-600 mb-6">
@@ -188,7 +188,7 @@ export function ProductDetail() {
             <div className="space-y-3 mb-8">
               {[
                 'Official manufacturer warranty',
-                'Free shipping on orders over $100',
+                'Free shipping on orders over €100',
                 '30-day return policy',
               ].map(item => (
                 <div key={item} className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">

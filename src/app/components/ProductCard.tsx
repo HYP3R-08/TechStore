@@ -44,7 +44,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="space-y-1 mb-4 flex-1">
           <p className="text-xs text-neutral-500 dark:text-neutral-400 tracking-wide">{product.brand} · {product.category}</p>
           <h3 className="text-sm font-light text-neutral-900 dark:text-white tracking-wide line-clamp-2">{product.name}</h3>
-          <p className="text-sm font-normal text-black dark:text-white">${product.price.toLocaleString()}</p>
+          <p className="text-sm font-normal text-black dark:text-white">€{product.price.toLocaleString()}</p>
         </div>
         <div className="relative">
           <button
