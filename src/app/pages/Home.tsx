@@ -43,7 +43,7 @@ function BestSellerCard({ product }: { product: ProductWithSales }) {
       <div className="p-4">
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">{product.brand} · {product.category}</p>
         <h3 className="text-sm font-light text-black dark:text-white tracking-wide line-clamp-2 mb-2">{product.name}</h3>
-        <p className="text-sm font-normal text-black dark:text-white mb-3">${product.price.toLocaleString()}</p>
+        <p className="text-sm font-normal text-black dark:text-white mb-3">€{product.price.toLocaleString()}</p>
         <div>
           <div className="flex justify-between items-center mb-1">
             <span className="text-xs text-neutral-500 dark:text-neutral-400">Sold</span>
@@ -295,7 +295,7 @@ export function Home() {
                 {featuredProduct.description}
               </p>
               <div className="flex items-center gap-6">
-                <span className="text-2xl font-normal">${featuredProduct.price.toLocaleString()}</span>
+                <span className="text-2xl font-normal">€{featuredProduct.price.toLocaleString()}</span>
                 <span className="flex items-center gap-2 text-sm px-5 py-2.5 border border-white/20 rounded-full text-white/70 group-hover:bg-white group-hover:text-black transition-all duration-300">
                   View Product
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

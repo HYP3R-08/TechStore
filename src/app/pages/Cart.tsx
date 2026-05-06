@@ -123,7 +123,7 @@ export function Cart() {
                       </button>
                     </div>
                     <p className="text-base font-normal text-black dark:text-white">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      €{(item.price * item.quantity).toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -145,23 +145,23 @@ export function Cart() {
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-neutral-600 dark:text-neutral-400">Subtotal</span>
-                  <span className="text-black dark:text-white font-normal">${subtotal.toFixed(2)}</span>
+                  <span className="text-black dark:text-white font-normal">€{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-neutral-600 dark:text-neutral-400">Shipping</span>
                   <span className="text-black dark:text-white font-normal">
-                    {shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
+                    {shipping === 0 ? 'Free' : `€${shipping.toFixed(2)}`}
                   </span>
                 </div>
                 {shipping > 0 && (
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Free shipping on orders over $100</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Free shipping on orders over €100</p>
                 )}
               </div>
 
               <div className="pt-4 border-t border-neutral-300 dark:border-neutral-700 mb-6">
                 <div className="flex justify-between text-base">
                   <span className="text-black dark:text-white font-normal">Total</span>
-                  <span className="text-black dark:text-white font-normal text-xl">${total.toFixed(2)}</span>
+                  <span className="text-black dark:text-white font-normal text-xl">€{total.toFixed(2)}</span>
                 </div>
               </div>
 

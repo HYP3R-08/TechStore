@@ -434,7 +434,7 @@ function ProductsTab() {
                     </td>
                     <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{product.brand}</td>
                     <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{product.category}</td>
-                    <td className="px-6 py-4 text-sm text-black dark:text-white">${product.price.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-sm text-black dark:text-white">€{product.price.toLocaleString()}</td>
                     <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{product.stock}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-3 py-1 rounded-full text-xs ${product.featured ? 'bg-black text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'}`}>
@@ -506,7 +506,7 @@ function OrderRow({ order, onUpdate, onDelete, onMarkShipped }: {
           <div className="text-sm text-black dark:text-white">{order.profiles?.full_name || 'Unknown'}</div>
           <div className="text-xs text-neutral-500 dark:text-neutral-400">{order.profiles?.email}</div>
         </td>
-        <td className="px-6 py-4 text-sm text-black dark:text-white font-normal">${order.total.toFixed(2)}</td>
+        <td className="px-6 py-4 text-sm text-black dark:text-white font-normal">€{order.total.toFixed(2)}</td>
         <td className="px-6 py-4 text-sm text-neutral-500 dark:text-neutral-400">
           {new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
         </td>
@@ -600,8 +600,8 @@ function OrderRow({ order, onUpdate, onDelete, onMarkShipped }: {
                   {order.order_items?.map(item => (
                     <div key={item.id} className="flex items-center justify-between text-sm">
                       <span className="text-black dark:text-white">{item.products?.name || 'Unknown product'}</span>
-                      <span className="text-neutral-500 dark:text-neutral-400">×{item.quantity} · ${item.unit_price.toFixed(2)} each</span>
-                      <span className="text-black dark:text-white font-normal">${(item.quantity * item.unit_price).toFixed(2)}</span>
+                      <span className="text-neutral-500 dark:text-neutral-400">×{item.quantity} · €{item.unit_price.toFixed(2)} each</span>
+                      <span className="text-black dark:text-white font-normal">€{(item.quantity * item.unit_price).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>

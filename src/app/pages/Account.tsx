@@ -138,10 +138,10 @@ function OrderCard({ order }: { order: OrderWithItems }) {
                   ) : (
                     <p className="text-sm text-neutral-500">Product no longer available</p>
                   )}
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Qty: {item.quantity} · ${item.unit_price.toFixed(2)} each</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Qty: {item.quantity} · €{item.unit_price.toFixed(2)} each</p>
                 </div>
                 <p className="text-sm font-normal text-black dark:text-white flex-shrink-0">
-                  ${(item.quantity * item.unit_price).toFixed(2)}
+                  €{(item.quantity * item.unit_price).toFixed(2)}
                 </p>
               </div>
             ))}
