@@ -1,0 +1,19 @@
+# Supabase CLI configuration.
+# project_id is the local project name; it does not have to match the remote ref.
+project_id = "techstore"
+
+[functions.create-checkout-session]
+# Requires a signed-in customer. The function resolves the caller from the
+# Authorization header itself — Supabase's own JWT check is not enough here,
+# because the public anon key satisfies it.
+verify_jwt = true
+
+[functions.send-shipping-email]
+# Admin-only; enforced inside the function against the caller's profile role.
+verify_jwt = true
+
+[functions.stripe-webhook]
+# Stripe has no Supabase JWT. The Stripe signature is the authentication, and it
+# is verified inside the function against STRIPE_WEBHOOK_SECRET. Leaving JWT
+# verification on here would simply reject every real Stripe delivery.
+verify_jwt = false
