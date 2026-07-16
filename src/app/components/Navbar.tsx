@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router';
-import { ShoppingBag, User, Menu, X, Cpu, LogOut, Shield, ClipboardList, Moon, Sun } from 'lucide-react';
+import { ShoppingBag, User, Menu, X, Cpu, LogOut, Shield, ClipboardList, Moon, Sun, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { useTheme } from '../../lib/ThemeContext';
@@ -59,9 +59,18 @@ export function Navbar({ cartCount }: NavbarProps) {
 
           {/* Icons */}
           <div className="flex items-center gap-1">
+            <Link
+              to="/products"
+              aria-label="Search products"
+              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
+            >
+              <Search className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
+            </Link>
+
             {/* Theme toggle */}
             <button
               onClick={toggle}
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
               className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
             >
               {theme === 'dark'
@@ -74,6 +83,8 @@ export function Navbar({ cartCount }: NavbarProps) {
             <div className="relative">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                aria-label="Account menu"
+                aria-expanded={isUserMenuOpen}
                 className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors flex items-center gap-2"
               >
                 <User className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
@@ -135,7 +146,13 @@ export function Navbar({ cartCount }: NavbarProps) {
               )}
             </div>
 
-            <Link to="/cart" className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors relative">
+            <Link
+              to="/cart"
+              aria-label={
+                cartCount > 0 ? `Cart, ${cartCount} ${cartCount === 1 ? 'item' : 'items'}` : 'Cart, empty'
+              }
+              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors relative"
+            >
               <ShoppingBag className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-black dark:bg-white text-white dark:text-black text-xs w-5 h-5 rounded-full flex items-center justify-center">
@@ -145,6 +162,8 @@ export function Navbar({ cartCount }: NavbarProps) {
             </Link>
 
             <button
+              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMenuOpen}
               className="md:hidden p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
