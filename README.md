@@ -1,6 +1,6 @@
 # TechStore
 
-[![CI](https://github.com/HYP3R-08/ecommerce1/actions/workflows/ci.yml/badge.svg)](https://github.com/HYP3R-08/ecommerce1/actions/workflows/ci.yml)
+[![CI](https://github.com/HYP3R-08/TechStore/actions/workflows/ci.yml/badge.svg)](https://github.com/HYP3R-08/TechStore/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 
 A full-stack e-commerce demo for technology products: **React + Vite + TypeScript** on the front end, **Supabase** (PostgreSQL, Auth, Edge Functions) behind it, and **Stripe Checkout** for payments.
@@ -97,8 +97,8 @@ The data model (`profiles`, `products`, `orders`, `order_items`) is protected by
 **Requirements:** Node 20+, a free [Supabase](https://supabase.com) project, and a [Stripe](https://stripe.com) account in test mode.
 
 ```bash
-git clone https://github.com/HYP3R-08/ecommerce1.git
-cd ecommerce1
+git clone https://github.com/HYP3R-08/TechStore.git
+cd TechStore
 npm install
 cp .env.example .env      # fill in your Supabase URL and anon key
 npm run dev
