@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { supabase, Order, OrderItem, Product, Profile } from '../../lib/supabase';
+import { toast } from 'sonner';
+import { supabase, Order, OrderItem, Product } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { Loader2, Package, ChevronDown, ChevronUp, User, Mail, ShieldCheck } from 'lucide-react';
 
@@ -10,9 +11,12 @@ type OrderWithItems = Order & {
 
 const STATUS_STEPS = ['pending', 'processing', 'shipped', 'delivered'] as const;
 
+// 'pending' means the same as 'awaiting_payment' and only appears on rows from
+// older versions. Both are labelled for what they are: nothing has been paid, so
+// nothing is on its way.
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'Order Received',
-  processing: 'Processing',
+  pending: 'Awaiting payment',
+  processing: 'Confirmed',
   shipped: 'Shipped',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
@@ -169,23 +173,28 @@ export function Account() {
     }
   }, [authLoading, user, navigate]);
 
-  useEffect(() => {
-    if (user) fetchOrders();
-  }, [user]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
+    if (!user) return;
     setLoadingOrders(true);
-    const { data } = await supabase
+
+    // Orders still awaiting payment are not shown: the customer opened Stripe and
+    // may never have paid, so listing them as orders would be a lie.
+    const { data, error } = await supabase
       .from('orders')
       .select('*, order_items(*, products(*))')
-      .eq('user_id', user!.id)
+      .eq('user_id', user.id)
       .neq('status', 'awaiting_payment')
       .neq('status', 'cancelled')
       .order('created_at', { ascending: false });
 
-    setOrders((data as OrderWithItems[]) || []);
+    if (error) toast.error(`Could not load your orders: ${error.message}`);
+    setOrders((data as OrderWithItems[]) ?? []);
     setLoadingOrders(false);
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   if (authLoading) {
     return (
