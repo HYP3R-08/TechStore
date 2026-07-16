@@ -1,12 +1,14 @@
 node_modules/
 dist/
 .claude/
+.vercel/
 supabase/.temp/
 *.exe
 *.tar.gz
 
 # Secrets stay local. .env.example is the exception: it documents which
 # variables exist, without their values, so a clone knows what to fill in.
+# The negation has to come last — in .gitignore the final matching rule wins.
 .env
 .env.*
 !.env.example
