@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { supabase, Product } from '../../lib/supabase';
+import { formatEur, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
 import { Button } from '../components/Button';
 import { ArrowRight, Cpu, HardDrive, Monitor, Wifi, TrendingUp } from 'lucide-react';
 
@@ -16,7 +17,7 @@ const IT_CATEGORIES = [
 const HERO_WORDS = ['Laptop', 'Smartphone', 'Gaming', 'Monitor', 'Components'];
 
 const PROMO_ITEMS = [
-  'Free shipping over $100',
+  `Free shipping over ${formatEur(FREE_SHIPPING_THRESHOLD)}`,
   'Official manufacturer warranty',
   '30-day return policy',
   'Expert technical support',
@@ -117,8 +118,10 @@ export function Home() {
       const products = (productsRes.data as Product[]) || [];
 
       if (products.length > 0) {
+        // Shape of get_product_sales(): one row per product with its units sold.
+        const sales = (salesRes.data ?? []) as Array<{ product_id: string; total_sold: number }>;
         const soldMap: Record<string, number> = {};
-        (salesRes.data || []).forEach((item: any) => {
+        sales.forEach((item) => {
           soldMap[item.product_id] = Number(item.total_sold);
         });
 
@@ -242,7 +245,8 @@ export function Home() {
                       {category.name}
                     </span>
                     <span className="text-white/60 text-xs tracking-wide mt-0.5 block opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      {categoryCounts[category.name] ?? '—'} products
+                      {categoryCounts[category.name] ?? '—'}{' '}
+                      {categoryCounts[category.name] === 1 ? 'product' : 'products'}
                     </span>
                   </div>
                 </div>
@@ -340,7 +344,10 @@ export function Home() {
             {[
               { title: 'Official Warranty', desc: 'All products come with full manufacturer warranty' },
               { title: 'Expert Support', desc: 'Technical assistance from our IT specialists' },
-              { title: 'Fast Shipping', desc: 'Free shipping on orders over $100' },
+              {
+                title: 'Fast Shipping',
+                desc: `Free shipping on orders over ${formatEur(FREE_SHIPPING_THRESHOLD)}`,
+              },
             ].map(item => (
               <div key={item.title} className="text-white">
                 <h3 className="text-lg font-light tracking-wide mb-2">{item.title}</h3>

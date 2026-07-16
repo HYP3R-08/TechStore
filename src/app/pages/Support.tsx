@@ -18,7 +18,7 @@ For urgent technical issues, please include your order number and a brief descri
     title: 'Shipping Info',
     content: `We ship to most countries worldwide. All orders are processed within 1–2 business days.
 Standard shipping typically takes 3–7 business days depending on your location.
-Orders over $100 qualify for free standard shipping automatically.
+Orders over €100 qualify for free standard shipping automatically.
 Once your order has shipped, you will receive a tracking number via email so you can monitor your delivery in real time.`,
   },
   {

@@ -1,17 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>TechStore</title>
-      <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
-    </head>
+    <title>TechStore — Technology store</title>
+    <meta
+      name="description"
+      content="TechStore is a demo e-commerce app: laptops, components and peripherals, with cart, Stripe checkout and an admin dashboard. Built with React, TypeScript and Supabase."
+    />
 
-    <body>
-      <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
-    </body>
-  </html>
-  
+    <!--
+      Open Graph tags: without these, sharing the link anywhere (LinkedIn, a chat)
+      renders a bare URL with no title, description or preview.
+      Add an og:image once there is a screenshot to point at — 1200×630.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TechStore — Technology store" />
+    <meta
+      property="og:description"
+      content="Demo e-commerce app: catalogue, search, cart, Stripe checkout and an admin dashboard. React + TypeScript + Supabase."
+    />
+    <meta property="og:url" content="https://techstore-murex-beta.vercel.app/" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- The theme is applied by ThemeContext on mount; this keeps the browser
+         chrome from flashing the wrong colour before that happens. -->
+    <meta name="color-scheme" content="light dark" />
+
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      #root {
+        height: 100%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <noscript>TechStore needs JavaScript enabled to run.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

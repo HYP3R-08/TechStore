@@ -57,19 +57,19 @@ export function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl p-8 md:p-12 shadow-sm">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-8 md:p-12 shadow-sm">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-black dark:bg-white rounded-xl flex items-center justify-center">
                 <Cpu className="w-6 h-6 text-white" />
               </div>
             </div>
-            <h1 className="text-3xl font-light tracking-tight text-black mb-2">
+            <h1 className="text-3xl font-light tracking-tight text-black dark:text-white mb-2">
               Reset Password
             </h1>
-            <p className="text-sm text-neutral-600 tracking-wide">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 tracking-wide">
               Choose a new password for your account
             </p>
           </div>
@@ -79,14 +79,14 @@ export function ResetPassword() {
               <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
-              <h2 className="text-lg font-light text-black mb-2">Password updated!</h2>
-              <p className="text-sm text-neutral-600">Redirecting you to the home page...</p>
+              <h2 className="text-lg font-light text-black dark:text-white mb-2">Password updated!</h2>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">Redirecting you to the home page...</p>
             </div>
           ) : !ready ? (
             <div className="text-center py-4">
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
                 Invalid or expired link.{' '}
-                <a href="/forgot-password" className="text-black hover:underline">
+                <a href="/forgot-password" className="text-black dark:text-white hover:underline">
                   Request a new one
                 </a>
               </p>
@@ -112,12 +112,12 @@ export function ResetPassword() {
                       placeholder="••••••••"
                       required
                       minLength={6}
-                      className="w-full px-4 py-3 pr-12 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:border-black transition-colors"
+                      className="w-full px-4 py-3 pr-12 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-black dark:text-white rounded-lg text-sm focus:outline-none focus:border-black dark:focus:border-neutral-400 transition-colors"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>

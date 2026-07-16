@@ -29,19 +29,19 @@ export function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl p-8 md:p-12 shadow-sm">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-8 md:p-12 shadow-sm">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-black dark:bg-white rounded-xl flex items-center justify-center">
                 <Cpu className="w-6 h-6 text-white" />
               </div>
             </div>
-            <h1 className="text-3xl font-light tracking-tight text-black mb-2">
+            <h1 className="text-3xl font-light tracking-tight text-black dark:text-white mb-2">
               Forgot Password
             </h1>
-            <p className="text-sm text-neutral-600 tracking-wide">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 tracking-wide">
               Enter your email and we'll send you a reset link
             </p>
           </div>
@@ -51,11 +51,11 @@ export function ForgotPassword() {
               <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-8 h-8 text-green-600" />
               </div>
-              <h2 className="text-lg font-light text-black mb-2">Check your inbox</h2>
-              <p className="text-sm text-neutral-600 mb-8">
-                We sent a password reset link to <span className="text-black font-normal">{email}</span>
+              <h2 className="text-lg font-light text-black dark:text-white mb-2">Check your inbox</h2>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-8">
+                We sent a password reset link to <span className="text-black dark:text-white font-normal">{email}</span>
               </p>
-              <Link to="/auth" className="text-sm text-black hover:underline">
+              <Link to="/auth" className="text-sm text-black dark:text-white hover:underline">
                 ← Back to sign in
               </Link>
             </div>
@@ -84,7 +84,7 @@ export function ForgotPassword() {
               <div className="mt-6 text-center">
                 <Link
                   to="/auth"
-                  className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-black transition-colors"
+                  className="inline-flex items-center gap-1 text-sm text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
                 >
                   <ArrowLeft className="w-3 h-3" />
                   Back to sign in
