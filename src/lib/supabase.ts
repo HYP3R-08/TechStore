@@ -1,16 +1,14 @@
-declare global {
-  interface ImportMeta {
-    env: {
-      VITE_SUPABASE_URL: string;
-      VITE_SUPABASE_ANON_KEY: string;
-    };
-  }
-}
-
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase environment variables. Copy .env.example to .env and fill in ' +
+      'VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -59,15 +57,35 @@ export interface ShippingAddress {
   } | null;
 }
 
+/**
+ * Order status lifecycle:
+ *
+ *   awaiting_payment  created at checkout, customer sent to Stripe, NOT paid yet
+ *   processing        the Stripe webhook confirmed payment — stock consumed here
+ *   shipped           dispatched, tracking_url set
+ *   delivered         completed
+ *   cancelled         stock credited back if it had been consumed
+ *
+ * 'pending' means the same as awaiting_payment and is never assigned to a new
+ * order; it is kept in the union because older rows still carry it.
+ */
+export type OrderStatus =
+  | 'awaiting_payment'
+  | 'pending'
+  | 'processing'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled';
+
 export interface Order {
   id: string;
   user_id: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: OrderStatus;
   total: number;
-  tracking_url?: string;
+  tracking_url?: string | null;
   shipping_address?: ShippingAddress | null;
   created_at: string;
-  profiles?: Profile;
+  // Populated only when a query asks for the nested rows.
   order_items?: OrderItem[];
 }
 
@@ -77,6 +95,7 @@ export interface OrderItem {
   product_id: string;
   quantity: number;
   unit_price: number;
+  variant_index?: number | null;
   products?: Product;
 }
 
