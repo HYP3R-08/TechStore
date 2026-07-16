@@ -33,6 +33,8 @@ if (/supabase\.(co|in)/.test(DATABASE_URL)) {
   process.exit(1);
 }
 
+const MIGRATION = 'supabase/migrations/0001_authorization_and_stock_invariants.sql';
+
 const USER_ID = '11111111-1111-1111-1111-111111111111';
 const ADMIN_ID = '22222222-2222-2222-2222-222222222222';
 const ORDER_ID = '33333333-3333-3333-3333-333333333333';
@@ -97,10 +99,77 @@ async function main() {
   // Re-running the migration must be safe: it is the recovery path when a paste
   // into the SQL editor half-fails, and it is what makes the file safe to keep.
   const migrationErr = await rejects(async () => {
-    await client.query(sql('supabase/migrations/0001_authorization_and_stock_invariants.sql'));
-    await client.query(sql('supabase/migrations/0001_authorization_and_stock_invariants.sql'));
+    await client.query(sql(MIGRATION));
+    await client.query(sql(MIGRATION));
   });
-  check('0001_authorization_and_stock_invariants.sql can be re-applied safely', migrationErr === null, migrationErr ?? '');
+  check('the migration can be re-applied safely', migrationErr === null, migrationErr ?? '');
+
+  console.log('\nObjects an older database carries');
+  // Policies are OR'd and triggers stack, so anything the migration fails to
+  // name survives beside the new rule and keeps granting. These are the shapes a
+  // database built by an earlier version actually holds: recreate them, re-run
+  // the migration, and prove they are gone rather than trusting that the names
+  // were guessed right.
+  await client.query(`
+    create policy "Users can confirm their own orders"
+      on public.orders for update
+      using      ((user_id = auth.uid()) and (status = 'pending'))
+      with check ((user_id = auth.uid()) and (status = 'processing'));
+
+    create policy "Admin can delete orders"
+      on public.orders for delete
+      using (exists (select 1 from profiles where profiles.id = auth.uid() and profiles.role = 'admin'));
+
+    create or replace function public.restore_stock(order_id_param uuid)
+    returns void language plpgsql security definer as $fn$ begin end $fn$;
+
+    create or replace function public.decrement_stock(items jsonb)
+    returns void language plpgsql security definer as $fn$ begin end $fn$;
+
+    create or replace function public.handle_order_confirmed()
+    returns trigger language plpgsql as $fn$ begin return new; end $fn$;
+
+    create trigger handle_order_confirmed
+      after update on public.orders
+      for each row execute function public.handle_order_confirmed();
+  `);
+
+  await client.query(sql(MIGRATION));
+
+  const bypass = await client.query(`
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'orders'
+      and policyname = 'Users can confirm their own orders'
+  `);
+  check('the customer order-confirmation policy is removed', bypass.rowCount === 0);
+
+  const legacyFns = await client.query(`
+    select p.proname from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname in ('restore_stock', 'decrement_stock')
+  `);
+  check('the stock RPCs are removed', legacyFns.rowCount === 0, legacyFns.rows.map((r) => r.proname).join(', '));
+
+  const orderTriggers = await client.query(`
+    select t.tgname from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    where c.relname = 'orders' and not t.tgisinternal
+  `);
+  check(
+    'exactly one stock trigger is left on orders',
+    orderTriggers.rowCount === 1 && orderTriggers.rows[0]?.tgname === 'on_order_stock_movement',
+    orderTriggers.rows.map((r) => r.tgname).join(', ') || 'none'
+  );
+
+  const deletePolicies = await client.query(`
+    select policyname from pg_policies
+    where schemaname = 'public' and tablename = 'orders' and cmd = 'DELETE'
+  `);
+  check(
+    'the delete rule is expressed once, not twice',
+    deletePolicies.rowCount === 1,
+    deletePolicies.rows.map((r) => r.policyname).join(', ')
+  );
 
   console.log('\nSignup and admin bootstrap');
   await client.query(`insert into auth.users (id, email) values ($1,'user@test.local'), ($2,'admin@test.local')`, [USER_ID, ADMIN_ID]);
@@ -177,6 +246,54 @@ async function main() {
   await client.query(`insert into public.order_items (order_id,product_id,quantity,unit_price) values ($1,$2,4,100)`, [UNPAID_ORDER_ID, PRODUCT_ID]);
   await client.query(`update public.orders set status='cancelled' where id=$1`, [UNPAID_ORDER_ID]);
   check('cancelling an order that never paid invents no stock (stays 10)', (await stock()) === 10, `stock ${await stock()}`);
+
+  console.log('\nPer-variant stock');
+  // Variants hold their own stock and products.stock is their sum — the same rule
+  // the admin dashboard applies on save. A trigger that moved only products.stock
+  // would be silently undone the next time a product was saved.
+  const VARIANT_PRODUCT = '66666666-6666-6666-6666-666666666666';
+  const VARIANT_ORDER = '77777777-7777-7777-7777-777777777777';
+  await client.query(
+    `insert into public.products (id,name,price,category,stock,variants)
+     values ($1,'Test Phone',500,'Smartphone',10,
+             '[{"color":"Black","stock":6,"images":[]},{"color":"White","stock":4,"images":[]}]'::jsonb)`,
+    [VARIANT_PRODUCT]
+  );
+  await client.query(
+    `insert into public.orders (id,user_id,status,total) values ($1,$2,'awaiting_payment',2500)`,
+    [VARIANT_ORDER, USER_ID]
+  );
+  await client.query(
+    `insert into public.order_items (order_id,product_id,quantity,unit_price,variant_index)
+     values ($1,$2,2,500,0), ($1,$2,3,500,1)`,
+    [VARIANT_ORDER, VARIANT_PRODUCT]
+  );
+
+  const variantState = async () => {
+    const r = await client.query(
+      `select stock, variants -> 0 ->> 'stock' as v0, variants -> 1 ->> 'stock' as v1
+       from public.products where id = $1`,
+      [VARIANT_PRODUCT]
+    );
+    return { stock: r.rows[0].stock, v0: Number(r.rows[0].v0), v1: Number(r.rows[0].v1) };
+  };
+
+  await client.query(`update public.orders set status='processing' where id=$1`, [VARIANT_ORDER]);
+  let vs = await variantState();
+  check(
+    'each variant is decremented on its own (Black 6→4, White 4→1)',
+    vs.v0 === 4 && vs.v1 === 1,
+    `Black ${vs.v0}, White ${vs.v1}`
+  );
+  check('products.stock is recomputed as the sum of variants (10 → 5)', vs.stock === 5, `stock ${vs.stock}`);
+
+  await client.query(`update public.orders set status='cancelled' where id=$1`, [VARIANT_ORDER]);
+  vs = await variantState();
+  check(
+    'cancelling restores each variant and the total (Black 6, White 4, stock 10)',
+    vs.v0 === 6 && vs.v1 === 4 && vs.stock === 10,
+    `Black ${vs.v0}, White ${vs.v1}, stock ${vs.stock}`
+  );
 
   console.log('\nAttack surface');
   const restore = await client.query(`select proname from pg_proc where proname='restore_stock'`);

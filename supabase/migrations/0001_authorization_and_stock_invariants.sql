@@ -134,17 +134,24 @@ create trigger profiles_prevent_role_escalation
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 3b. Orders — a customer cannot declare their own order paid
 --
--- The insert policy constrains `status`, not just ownership: an order may only
--- be created unpaid. Checking ownership alone would let a customer insert an
--- order already marked 'processing', which the admin dashboard would show as
--- paid and ship, with no payment behind it.
+-- Confirming a payment belongs to Stripe, reported through a signed webhook that
+-- runs as service_role. No customer-facing policy may grant a status change:
+-- an UPDATE policy of the shape
+--     using (user_id = auth.uid() and status = 'pending')
+--     with check (user_id = auth.uid() and status = 'processing')
+-- hands the customer the payment confirmation itself, which is the one decision
+-- the client must never make. It is dropped here by name.
+--
+-- The insert policy constrains `status` too, not just ownership: an order may
+-- only be created unpaid. Ownership alone would let a customer insert an order
+-- already marked 'processing', which the dashboard would show as paid and ship.
 --
 -- 'pending' is accepted alongside 'awaiting_payment' so a browser still running
 -- an older frontend keeps working across a deploy.
---
--- There is deliberately no UPDATE policy for customers: status transitions
--- belong to the Stripe webhook (service_role, bypasses RLS) and to admins.
 -- ─────────────────────────────────────────────────────────────────────────────
+
+drop policy if exists "Users can confirm their own orders" on public.orders;
+drop policy if exists "orders_update_own"                  on public.orders;
 
 drop policy if exists "orders_insert_own" on public.orders;
 create policy "orders_insert_own"
@@ -159,12 +166,19 @@ create policy "orders_update_admin"
 
 -- The admin dashboard deletes cancelled orders, so the DELETE policy has to
 -- exist: RLS discards an unpolicied delete silently, reporting no error.
-drop policy if exists "orders_delete_admin" on public.orders;
+--
+-- The "Admin can ..." variants are dropped so the same rule is not expressed
+-- twice under two names. They inline the profiles lookup that is_admin() already
+-- encapsulates; policies are OR'd, so leaving them would mean maintaining one
+-- rule in two places and hoping they never diverge.
+drop policy if exists "Admin can delete orders" on public.orders;
+drop policy if exists "orders_delete_admin"     on public.orders;
 create policy "orders_delete_admin"
   on public.orders for delete
   using (public.is_admin());
 
-drop policy if exists "order_items_delete_admin" on public.order_items;
+drop policy if exists "Admin can delete order_items" on public.order_items;
+drop policy if exists "order_items_delete_admin"     on public.order_items;
 create policy "order_items_delete_admin"
   on public.order_items for delete
   using (public.is_admin());
@@ -179,16 +193,18 @@ create policy "products_update_admin"
 -- 4. Stock movements as a database invariant
 --
 -- One trigger owns stock in both directions, keyed on the status transition, so
--- inventory cannot be moved out of band by whatever the client decides to call.
+-- inventory cannot be moved out of band by whatever a client decides to call.
 --
--- Two details worth keeping in mind when reading it:
+-- Three things it has to get right:
 --
---   * Quantities are aggregated per product before the update. `update products
---     ... from order_items` applies only ONE arbitrary source row per target
---     row, so an order holding two variants of the same product would otherwise
---     consume stock once instead of twice.
+--   * Variants carry their own stock. When an order line names a variant, that
+--     variant's stock moves and products.stock is recomputed as the sum — which
+--     is the same rule the admin dashboard applies when saving a product. Moving
+--     products.stock alone would be undone by the next save.
+--   * The product is re-read on each iteration, so two lines naming different
+--     variants of the same product both land instead of overwriting each other.
 --   * Stock is credited back only for orders that actually consumed it, so
---     cancelling an unpaid order cannot invent inventory.
+--     cancelling an order that was never paid cannot invent inventory.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 create or replace function public.handle_order_stock_movement()
@@ -198,38 +214,71 @@ security definer
 set search_path = public
 as $$
 declare
+  item            record;
+  prod            public.products%rowtype;
+  new_variants    jsonb;
+  direction       int;
   consumed_before boolean := old.status in ('processing', 'shipped', 'delivered');
   consumed_after  boolean := new.status in ('processing', 'shipped', 'delivered');
 begin
   if consumed_after and not consumed_before then
-    update public.products p
-    set stock = greatest(0, p.stock - agg.qty)
-    from (
-      select product_id, sum(quantity) as qty
-      from public.order_items
-      where order_id = new.id and product_id is not null
-      group by product_id
-    ) agg
-    where agg.product_id = p.id;
-
+    direction := -1;
   elsif consumed_before and not consumed_after then
-    update public.products p
-    set stock = p.stock + agg.qty
-    from (
-      select product_id, sum(quantity) as qty
-      from public.order_items
-      where order_id = new.id and product_id is not null
-      group by product_id
-    ) agg
-    where agg.product_id = p.id;
+    direction := 1;
+  else
+    return new;
   end if;
+
+  for item in
+    select product_id, quantity, variant_index
+    from public.order_items
+    where order_id = new.id and product_id is not null
+  loop
+    select * into prod from public.products where id = item.product_id;
+    continue when not found;
+
+    -- A variant index that no longer resolves (the product was edited after the
+    -- order) falls back to the product total rather than raising, so a stale
+    -- index cannot block an order from being cancelled.
+    if item.variant_index is not null
+       and jsonb_typeof(prod.variants) = 'array'
+       and item.variant_index < jsonb_array_length(prod.variants)
+    then
+      new_variants := jsonb_set(
+        prod.variants,
+        array[item.variant_index::text, 'stock'],
+        to_jsonb(
+          greatest(
+            0,
+            coalesce((prod.variants -> item.variant_index ->> 'stock')::int, 0)
+              + direction * item.quantity
+          )
+        )
+      );
+
+      update public.products
+      set variants = new_variants,
+          stock = (
+            select coalesce(sum((v ->> 'stock')::int), 0)
+            from jsonb_array_elements(new_variants) v
+          )
+      where id = item.product_id;
+    else
+      update public.products
+      set stock = greatest(0, stock + direction * item.quantity)
+      where id = item.product_id;
+    end if;
+  end loop;
 
   return new;
 end;
 $$;
 
-drop trigger if exists on_order_confirmed        on public.orders;
-drop trigger if exists on_order_stock_movement   on public.orders;
+-- Dropped by the name it actually carries, so the old and the new trigger cannot
+-- both end up firing and moving stock twice.
+drop trigger if exists handle_order_confirmed     on public.orders;
+drop trigger if exists on_order_confirmed         on public.orders;
+drop trigger if exists on_order_stock_movement    on public.orders;
 create trigger on_order_stock_movement
   after update of status on public.orders
   for each row execute function public.handle_order_stock_movement();
@@ -237,15 +286,31 @@ create trigger on_order_stock_movement
 drop function if exists public.handle_order_confirmed() cascade;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 5. restore_stock() — dropped
+-- 5. Stock RPCs — dropped
 --
--- The trigger above owns restocking, so no client ever needs to ask for it. An
--- RPC that takes an order id and moves inventory is an entry point worth not
--- having: the safest version of it is the one that does not exist.
+-- The trigger above owns stock, so no client ever needs to ask for a movement.
+-- Both of these were SECURITY DEFINER with no authorization check and reachable
+-- by any caller holding the anon key — which ships in the browser bundle. An RPC
+-- that moves inventory on request is an entry point worth not having: the safest
+-- version of it is the one that does not exist.
+--
+-- Signatures are resolved from the catalogue rather than assumed, so the drop
+-- does not depend on getting the argument list right.
 -- ─────────────────────────────────────────────────────────────────────────────
 
-drop function if exists public.restore_stock(uuid) cascade;
-drop function if exists public.restore_stock(order_id_param uuid) cascade;
+do $$
+declare f record;
+begin
+  for f in
+    select p.oid::regprocedure as signature
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in ('restore_stock', 'decrement_stock')
+  loop
+    execute format('drop function if exists %s cascade', f.signature);
+  end loop;
+end $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. get_product_sales()
@@ -296,3 +361,26 @@ begin
   return new;
 end;
 $$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 8. Catch-all: pin search_path on every SECURITY DEFINER function
+--
+-- The functions above set it explicitly. This sweeps up anything else in the
+-- schema, now or later, rather than depending on a hand-kept list being complete
+-- — which is exactly the assumption a hardening step should not make.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+do $$
+declare f record;
+begin
+  for f in
+    select p.oid::regprocedure as signature
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.prosecdef
+      and (p.proconfig is null or not (p.proconfig::text like '%search_path%'))
+  loop
+    execute format('alter function %s set search_path = public', f.signature);
+  end loop;
+end $$;
