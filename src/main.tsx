@@ -1,10 +1,16 @@
-import { createRoot } from "react-dom/client";
-import App from "./app/App.tsx";
-import { AuthProvider } from "./lib/AuthContext.tsx";
-import "./styles/index.css";
+import { createRoot } from 'react-dom/client';
+import App from './app/App';
+import { AuthProvider } from './lib/AuthContext';
+import { CartProvider } from './lib/CartContext';
+import './styles/index.css';
 
-createRoot(document.getElementById("root")!).render(
+const container = document.getElementById('root');
+if (!container) throw new Error('Root element #root not found in index.html');
+
+createRoot(container).render(
   <AuthProvider>
-    <App />
+    <CartProvider>
+      <App />
+    </CartProvider>
   </AuthProvider>
 );

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Product, CartItem } from '../../lib/supabase';
+import { Product } from '../../lib/supabase';
 import { Check } from 'lucide-react';
+import { useCart } from '../../lib/CartContext';
+import { formatEur } from '../../lib/pricing';
 
 interface ProductCardProps {
   product: Product;
@@ -9,19 +11,13 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const [added, setAdded] = useState(false);
+  const { addItem } = useCart();
 
   const handleAddToCart = (e: React.MouseEvent) => {
+    // The card is wrapped in a Link to the product page.
     e.preventDefault();
     if (product.stock === 0) return;
-    const cart: CartItem[] = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existing = cart.find(i => i.id === product.id);
-    if (existing) {
-      existing.quantity = Math.min(product.stock, existing.quantity + 1);
-    } else {
-      cart.push({ ...product, quantity: 1 });
-    }
-    localStorage.setItem('cart', JSON.stringify(cart));
-    window.dispatchEvent(new Event('storage'));
+    addItem(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 800);
   };
@@ -32,6 +28,9 @@ export function ProductCard({ product }: ProductCardProps) {
         <img
           src={product.variants?.[0]?.images?.[0] || product.image_url}
           alt={product.name}
+          loading="lazy"
+          width={400}
+          height={400}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         {product.stock === 0 && (
@@ -44,12 +43,13 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="space-y-1 mb-4 flex-1">
           <p className="text-xs text-neutral-500 dark:text-neutral-400 tracking-wide">{product.brand} · {product.category}</p>
           <h3 className="text-sm font-light text-neutral-900 dark:text-white tracking-wide line-clamp-2">{product.name}</h3>
-          <p className="text-sm font-normal text-black dark:text-white">€{product.price.toLocaleString()}</p>
+          <p className="text-sm font-normal text-black dark:text-white">{formatEur(product.price)}</p>
         </div>
         <div className="relative">
           <button
             onClick={handleAddToCart}
             disabled={product.stock === 0}
+            aria-label={product.stock === 0 ? `${product.name} is out of stock` : `Add ${product.name} to cart`}
             className={`w-full py-2.5 text-xs tracking-wide rounded-lg transition-all duration-300 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed ${
               added
                 ? 'bg-green-600 text-white animate-[pop_0.35s_ease-out]'

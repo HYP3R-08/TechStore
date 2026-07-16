@@ -1,10 +1,11 @@
 import { Outlet, useLocation } from 'react-router';
 import { Navbar } from './Navbar';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Cpu } from 'lucide-react';
+import { useCart } from '../../lib/CartContext';
 
 export function Layout() {
-  const [cartCount, setCartCount] = useState(0);
+  const { count } = useCart();
   const location = useLocation();
 
   useEffect(() => {
@@ -13,21 +14,9 @@ export function Layout() {
     }
   }, [location.pathname, location.hash]);
 
-  useEffect(() => {
-    const updateCartCount = () => {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      const count = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
-      setCartCount(count);
-    };
-
-    updateCartCount();
-    window.addEventListener('storage', updateCartCount);
-    return () => window.removeEventListener('storage', updateCartCount);
-  }, [location]);
-
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950">
-      <Navbar cartCount={cartCount} />
+      <Navbar cartCount={count} />
       <main className="pt-16">
         <Outlet />
       </main>

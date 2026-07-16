@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { supabase, CartItem } from '../../lib/supabase';
+import { FunctionsHttpError } from '@supabase/supabase-js';
+import { toast } from 'sonner';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
+import { useCart, cartKey } from '../../lib/CartContext';
+import { formatEur, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -32,10 +36,19 @@ const COUNTRIES = [
   { code: 'BE', label: 'Belgium' },
 ];
 
+/** Turns an Edge Function failure into the message the function actually sent. */
+async function messageFor(error: unknown, fallback: string): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    const body = await error.context.json().catch(() => null);
+    if (body && typeof body.error === 'string') return body.error;
+  }
+  return fallback;
+}
+
 export function Checkout() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const { items: cartItems, subtotal, shipping, total } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<ShippingForm>({
     firstName: '',
@@ -51,95 +64,65 @@ export function Checkout() {
   });
 
   useEffect(() => {
-    if (!user) { navigate('/auth'); return; }
-    const cart: CartItem[] = JSON.parse(localStorage.getItem('cart') || '[]');
-    if (cart.length === 0) { navigate('/cart'); return; }
-    setCartItems(cart);
-    setForm(f => ({ ...f, email: user.email ?? '' }));
-  }, [user]);
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    if (cartItems.length === 0) {
+      navigate('/cart');
+      return;
+    }
+    setForm(f => ({ ...f, email: f.email || user.email || '' }));
+  }, [user, cartItems.length, navigate]);
 
   const update = (field: keyof ShippingForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(f => ({ ...f, [field]: e.target.value }));
 
+  /**
+   * Sends only what we are entitled to decide: which products, how many, and
+   * where to ship them. The Edge Function reads the prices from the database,
+   * checks stock, computes the total and creates the order — so nothing here can
+   * change what gets charged.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || submitting) return;
     setSubmitting(true);
 
-    const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const shipping = subtotal > 100 ? 0 : 15;
-    const total = subtotal + shipping;
-    const orderId = crypto.randomUUID();
-
-    const shippingAddress = {
-      name: `${form.firstName} ${form.lastName}`.trim(),
-      phone: form.phone,
-      email: form.email,
-      address: {
-        line1: form.line1,
-        line2: form.line2 || null,
-        city: form.city,
-        state: form.state || null,
-        postal_code: form.postalCode,
-        country: form.country,
-      },
-    };
-
-    const { data: fn, error: fnError } = await supabase.functions.invoke('create-checkout-session', {
+    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
       body: {
-        cartItems: cartItems.map(i => ({
-          name: i.name,
-          price: i.price,
-          quantity: i.quantity,
-          image_url: i.image_url,
+        items: cartItems.map(item => ({
+          productId: item.id,
+          quantity: item.quantity,
+          variantIndex: item.variantIndex ?? null,
         })),
-        orderId,
-        origin: window.location.origin,
+        shippingAddress: {
+          name: `${form.firstName} ${form.lastName}`.trim(),
+          phone: form.phone || null,
+          email: form.email,
+          address: {
+            line1: form.line1,
+            line2: form.line2 || null,
+            city: form.city,
+            state: form.state || null,
+            postal_code: form.postalCode,
+            country: form.country,
+          },
+        },
       },
     });
 
-    if (fnError || !fn?.url) {
-      alert('Error connecting to payment. Please try again.');
+    if (error || !data?.url) {
+      toast.error(await messageFor(error, 'Could not start the payment. Please try again.'));
       setSubmitting(false);
       return;
     }
 
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({ id: orderId, user_id: user.id, status: 'pending', total, shipping_address: shippingAddress })
-      .select()
-      .single();
-
-    if (orderError || !order) {
-      alert('Error placing order. Please try again.');
-      setSubmitting(false);
-      return;
-    }
-
-    const { error: itemsError } = await supabase.from('order_items').insert(
-      cartItems.map(item => ({
-        order_id: orderId,
-        product_id: item.id,
-        quantity: item.quantity,
-        unit_price: item.price,
-        variant_index: item.variantIndex ?? null,
-      }))
-    );
-
-    if (itemsError) {
-      await supabase.from('orders').delete().eq('id', orderId);
-      alert('Error saving order. Please try again.');
-      setSubmitting(false);
-      return;
-    }
-
-    window.location.href = fn.url;
+    // The cart is cleared once the webhook has confirmed the payment, not here:
+    // the customer may still abandon Stripe and come back to it.
+    window.location.href = data.url;
   };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal > 100 ? 0 : 15;
-  const total = subtotal + shipping;
 
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950">
@@ -267,17 +250,20 @@ export function Checkout() {
 
               <div className="space-y-4 mb-5">
                 {cartItems.map(item => (
-                  <div key={`${item.id}-${item.variantIndex}`} className="flex items-center gap-3">
+                  <div key={cartKey(item.id, item.variantIndex)} className="flex items-center gap-3">
                     <img
                       src={item.variantIndex != null ? (item.variants?.[item.variantIndex]?.images?.[0] || item.image_url) : item.image_url}
                       alt={item.name}
+                      loading="lazy"
+                      width={48}
+                      height={48}
                       className="w-12 h-12 object-cover rounded-lg bg-neutral-100 dark:bg-neutral-800 flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-black dark:text-white truncate">{item.name}</p>
                       <p className="text-xs text-neutral-500 dark:text-neutral-400">×{item.quantity}</p>
                     </div>
-                    <p className="text-sm text-black dark:text-white">€{(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="text-sm text-black dark:text-white">{formatEur(item.price * item.quantity)}</p>
                   </div>
                 ))}
               </div>
@@ -285,18 +271,20 @@ export function Checkout() {
               <div className="border-t border-neutral-200 dark:border-neutral-700 pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-neutral-600 dark:text-neutral-400">Subtotal</span>
-                  <span className="text-black dark:text-white">€{subtotal.toFixed(2)}</span>
+                  <span className="text-black dark:text-white">{formatEur(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-neutral-600 dark:text-neutral-400">Shipping</span>
-                  <span className="text-black dark:text-white">{shipping === 0 ? 'Free' : `€${shipping.toFixed(2)}`}</span>
+                  <span className="text-black dark:text-white">{shipping === 0 ? 'Free' : formatEur(shipping)}</span>
                 </div>
                 {shipping > 0 && (
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Free shipping on orders over €100</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Free shipping on orders over {formatEur(FREE_SHIPPING_THRESHOLD)}
+                  </p>
                 )}
                 <div className="flex justify-between text-base pt-3 border-t border-neutral-200 dark:border-neutral-700">
                   <span className="text-black dark:text-white font-normal">Total</span>
-                  <span className="text-black dark:text-white font-normal">€{total.toFixed(2)}</span>
+                  <span className="text-black dark:text-white font-normal">{formatEur(total)}</span>
                 </div>
               </div>
             </div>

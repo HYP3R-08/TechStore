@@ -1,3 +1,5 @@
+// The provider and its hook belong together; see the note in CartContext.tsx.
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from 'react';
 
 type Theme = 'light' | 'dark';

@@ -4,10 +4,12 @@ import { supabase, Product } from '../../lib/supabase';
 import { ProductCard } from '../components/ProductCard';
 import { Button } from '../components/Button';
 import { ArrowLeft, Check, Loader2, ShoppingCart } from 'lucide-react';
+import { useCart } from '../../lib/CartContext';
 
 export function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addItem } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
@@ -48,17 +50,7 @@ export function ProductDetail() {
 
   const handleAddToCart = () => {
     if (!product) return;
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItem = cart.find((item: any) => item.id === product.id && item.variantIndex === selectedVariant);
-
-    if (existingItem) {
-      existingItem.quantity = Math.min(currentStock, existingItem.quantity + quantity);
-    } else {
-      cart.push({ ...product, quantity: Math.min(currentStock, quantity), variantIndex: selectedVariant });
-    }
-
-    localStorage.setItem('cart', JSON.stringify(cart));
-    window.dispatchEvent(new Event('storage'));
+    addItem(product, selectedVariant, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -160,7 +152,9 @@ export function ProductDetail() {
                 <p className="text-sm text-neutral-700 dark:text-neutral-300 mb-2 tracking-wide">
                   Color:{' '}
                   <span className="font-normal text-black dark:text-white">
-                    {selectedVariant !== null ? product.variants[selectedVariant].color : 'Default'}
+                    {selectedVariant !== null
+                      ? (product.variants[selectedVariant]?.color ?? 'Default')
+                      : 'Default'}
                   </span>
                 </p>
                 <div className="flex flex-wrap gap-2">

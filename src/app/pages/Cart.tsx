@@ -1,51 +1,18 @@
-import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '../components/Button';
 import { Trash2, ArrowLeft, ShoppingCart } from 'lucide-react';
-import { CartItem } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
+import { useCart, cartKey } from '../../lib/CartContext';
+import { formatEur, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
 
 export function Cart() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  useEffect(() => {
-    loadCart();
-  }, []);
-
-  const loadCart = () => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    setCartItems(cart);
-  };
-
-  const updateQuantity = (id: string, newQuantity: number) => {
-    const updatedCart = cartItems.map(item =>
-      item.id === id ? { ...item, quantity: Math.min(item.stock, Math.max(1, newQuantity)) } : item
-    );
-    setCartItems(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event('storage'));
-  };
-
-  const removeItem = (id: string) => {
-    const updatedCart = cartItems.filter(item => item.id !== id);
-    setCartItems(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event('storage'));
-  };
+  const { items: cartItems, updateQuantity, removeItem, subtotal, shipping, total } = useCart();
 
   const handleCheckout = () => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-    navigate('/checkout');
+    navigate(user ? '/checkout' : '/auth');
   };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal > 100 ? 0 : 15;
-  const total = subtotal + shipping;
 
   if (cartItems.length === 0) {
     return (
@@ -83,12 +50,18 @@ export function Cart() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-6">
-            {cartItems.map(item => (
-              <div key={item.id} className="flex gap-6 pb-6 border-b border-neutral-200 dark:border-neutral-800">
+            {cartItems.map(item => {
+              const key = cartKey(item.id, item.variantIndex);
+              const variant = item.variantIndex != null ? item.variants?.[item.variantIndex] : undefined;
+              return (
+              <div key={key} className="flex gap-6 pb-6 border-b border-neutral-200 dark:border-neutral-800">
                 <Link to={`/product/${item.id}`} className="w-24 h-24 bg-neutral-50 dark:bg-neutral-800 flex-shrink-0 overflow-hidden rounded-lg">
                   <img
-                    src={item.variants?.[0]?.images?.[0] || item.image_url}
+                    src={variant?.images?.[0] || item.variants?.[0]?.images?.[0] || item.image_url}
                     alt={item.name}
+                    loading="lazy"
+                    width={96}
+                    height={96}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
                 </Link>
@@ -103,39 +76,46 @@ export function Cart() {
                     </Link>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
                       {item.category}{item.brand ? ` · ${item.brand}` : ''}
+                      {variant?.color ? ` · ${variant.color}` : ''}
                     </p>
                   </div>
 
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center border border-neutral-300 dark:border-neutral-700 rounded-full overflow-hidden">
                       <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="px-3 py-1 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-neutral-700 dark:text-neutral-300 text-sm"
+                        onClick={() => updateQuantity(key, item.quantity - 1)}
+                        disabled={item.quantity <= 1}
+                        aria-label={`Decrease quantity of ${item.name}`}
+                        className="px-3 py-1 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-neutral-700 dark:text-neutral-300 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         −
                       </button>
                       <span className="px-4 py-1 text-sm dark:text-white">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="px-3 py-1 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-neutral-700 dark:text-neutral-300 text-sm"
+                        onClick={() => updateQuantity(key, item.quantity + 1)}
+                        disabled={item.quantity >= item.stock}
+                        aria-label={`Increase quantity of ${item.name}`}
+                        className="px-3 py-1 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-neutral-700 dark:text-neutral-300 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         +
                       </button>
                     </div>
                     <p className="text-base font-normal text-black dark:text-white">
-                      €{(item.price * item.quantity).toFixed(2)}
+                      {formatEur(item.price * item.quantity)}
                     </p>
                   </div>
                 </div>
 
                 <button
-                  onClick={() => removeItem(item.id)}
+                  onClick={() => removeItem(key)}
+                  aria-label={`Remove ${item.name} from cart`}
                   className="p-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-full transition-colors self-start"
                 >
                   <Trash2 className="w-4 h-4 text-neutral-500" />
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="lg:col-span-1">
@@ -145,23 +125,25 @@ export function Cart() {
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-neutral-600 dark:text-neutral-400">Subtotal</span>
-                  <span className="text-black dark:text-white font-normal">€{subtotal.toFixed(2)}</span>
+                  <span className="text-black dark:text-white font-normal">{formatEur(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-neutral-600 dark:text-neutral-400">Shipping</span>
                   <span className="text-black dark:text-white font-normal">
-                    {shipping === 0 ? 'Free' : `€${shipping.toFixed(2)}`}
+                    {shipping === 0 ? 'Free' : formatEur(shipping)}
                   </span>
                 </div>
                 {shipping > 0 && (
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Free shipping on orders over €100</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Free shipping on orders over {formatEur(FREE_SHIPPING_THRESHOLD)}
+                  </p>
                 )}
               </div>
 
               <div className="pt-4 border-t border-neutral-300 dark:border-neutral-700 mb-6">
                 <div className="flex justify-between text-base">
                   <span className="text-black dark:text-white font-normal">Total</span>
-                  <span className="text-black dark:text-white font-normal text-xl">€{total.toFixed(2)}</span>
+                  <span className="text-black dark:text-white font-normal text-xl">{formatEur(total)}</span>
                 </div>
               </div>
 
