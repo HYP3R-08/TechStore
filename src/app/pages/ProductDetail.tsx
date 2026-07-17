@@ -5,6 +5,7 @@ import { ProductCard } from '../components/ProductCard';
 import { Button } from '../components/Button';
 import { ArrowLeft, Check, Loader2, ShoppingCart } from 'lucide-react';
 import { useCart } from '../../lib/CartContext';
+import { formatEur, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
 
 export function ProductDetail() {
   const { id } = useParams();
@@ -137,7 +138,7 @@ export function ProductDetail() {
               {product.name}
             </h1>
             <p className="text-3xl font-normal text-black dark:text-white mb-2">
-              €{product.price.toLocaleString()}
+              {formatEur(product.price)}
             </p>
             {currentStock > 0 ? (
               <p className="text-sm text-green-600 mb-6">
@@ -182,7 +183,7 @@ export function ProductDetail() {
             <div className="space-y-3 mb-8">
               {[
                 'Official manufacturer warranty',
-                'Free shipping on orders over €100',
+                `Free shipping on orders over ${formatEur(FREE_SHIPPING_THRESHOLD)}`,
                 '30-day return policy',
               ].map(item => (
                 <div key={item} className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">

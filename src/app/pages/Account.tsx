@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { toast } from 'sonner';
 import { supabase, Order, OrderItem, Product } from '../../lib/supabase';
+import { formatEur } from '../../lib/pricing';
 import { useAuth } from '../../lib/AuthContext';
 import { Loader2, Package, ChevronDown, ChevronUp, User, Mail, ShieldCheck } from 'lucide-react';
 
@@ -142,10 +143,12 @@ function OrderCard({ order }: { order: OrderWithItems }) {
                   ) : (
                     <p className="text-sm text-neutral-500">Product no longer available</p>
                   )}
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Qty: {item.quantity} · €{item.unit_price.toFixed(2)} each</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Qty: {item.quantity} · {formatEur(item.unit_price)} each
+                  </p>
                 </div>
                 <p className="text-sm font-normal text-black dark:text-white flex-shrink-0">
-                  €{(item.quantity * item.unit_price).toFixed(2)}
+                  {formatEur(item.quantity * item.unit_price)}
                 </p>
               </div>
             ))}
