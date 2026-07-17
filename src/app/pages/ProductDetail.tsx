@@ -5,7 +5,7 @@ import { ProductCard } from '../components/ProductCard';
 import { Button } from '../components/Button';
 import { ArrowLeft, Check, Loader2, ShoppingCart } from 'lucide-react';
 import { useCart } from '../../lib/CartContext';
-import { formatEur, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
+import { formatEur, formatEurCompact, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
 
 export function ProductDetail() {
   const { id } = useParams();
@@ -183,7 +183,7 @@ export function ProductDetail() {
             <div className="space-y-3 mb-8">
               {[
                 'Official manufacturer warranty',
-                `Free shipping on orders over ${formatEur(FREE_SHIPPING_THRESHOLD)}`,
+                `Free shipping on orders over ${formatEurCompact(FREE_SHIPPING_THRESHOLD)}`,
                 '30-day return policy',
               ].map(item => (
                 <div key={item} className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">

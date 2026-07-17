@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { useCart, cartKey } from '../../lib/CartContext';
-import { formatEur, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
+import { formatEur, formatEurCompact, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -279,7 +279,7 @@ export function Checkout() {
                 </div>
                 {shipping > 0 && (
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Free shipping on orders over {formatEur(FREE_SHIPPING_THRESHOLD)}
+                    Free shipping on orders over {formatEurCompact(FREE_SHIPPING_THRESHOLD)}
                   </p>
                 )}
                 <div className="flex justify-between text-base pt-3 border-t border-neutral-200 dark:border-neutral-700">

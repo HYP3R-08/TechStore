@@ -19,9 +19,22 @@ export function shippingFor(subtotal: number): number {
   return subtotal > FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
 }
 
+/** Amounts a customer is charged: always two decimals, as on a receipt. */
 export function formatEur(amount: number): string {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',
     currency: 'EUR',
+  }).format(amount);
+}
+
+/**
+ * Round figures in prose, where "100 €" reads better than "100,00 €".
+ * For anything a customer actually pays, use formatEur.
+ */
+export function formatEurCompact(amount: number): string {
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
   }).format(amount);
 }

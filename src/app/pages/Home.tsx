@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { supabase, Product } from '../../lib/supabase';
-import { formatEur, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
+import { formatEur, formatEurCompact, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
 import { Button } from '../components/Button';
 import { ArrowRight, Cpu, HardDrive, Monitor, Wifi, TrendingUp } from 'lucide-react';
 
@@ -17,7 +17,7 @@ const IT_CATEGORIES = [
 const HERO_WORDS = ['Laptop', 'Smartphone', 'Gaming', 'Monitor', 'Components'];
 
 const PROMO_ITEMS = [
-  `Free shipping over ${formatEur(FREE_SHIPPING_THRESHOLD)}`,
+  `Free shipping over ${formatEurCompact(FREE_SHIPPING_THRESHOLD)}`,
   'Official manufacturer warranty',
   '30-day return policy',
   'Expert technical support',
@@ -346,7 +346,7 @@ export function Home() {
               { title: 'Expert Support', desc: 'Technical assistance from our IT specialists' },
               {
                 title: 'Fast Shipping',
-                desc: `Free shipping on orders over ${formatEur(FREE_SHIPPING_THRESHOLD)}`,
+                desc: `Free shipping on orders over ${formatEurCompact(FREE_SHIPPING_THRESHOLD)}`,
               },
             ].map(item => (
               <div key={item.title} className="text-white">

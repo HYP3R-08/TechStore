@@ -3,7 +3,7 @@ import { Button } from '../components/Button';
 import { Trash2, ArrowLeft, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { useCart, cartKey } from '../../lib/CartContext';
-import { formatEur, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
+import { formatEur, formatEurCompact, FREE_SHIPPING_THRESHOLD } from '../../lib/pricing';
 
 export function Cart() {
   const navigate = useNavigate();
@@ -135,7 +135,7 @@ export function Cart() {
                 </div>
                 {shipping > 0 && (
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Free shipping on orders over {formatEur(FREE_SHIPPING_THRESHOLD)}
+                    Free shipping on orders over {formatEurCompact(FREE_SHIPPING_THRESHOLD)}
                   </p>
                 )}
               </div>
