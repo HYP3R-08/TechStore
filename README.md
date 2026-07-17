@@ -7,10 +7,13 @@ A full-stack e-commerce demo for technology products: **React + Vite + TypeScrip
 
 🔗 **Live demo:** https://techstore-murex-beta.vercel.app/
 
-> Browse, search, cart, Stripe checkout, order history — plus an admin dashboard gated by database-level authorization.
+![TechStore — product catalogue](docs/storefront.png)
 
-> [!NOTE]
-> The initial UI scaffolding was generated with Figma Make. The data model, the Row Level Security policies, the Stripe integration and the Edge Functions are hand-written — that is the part worth reading.
+| Search | Product page, dark theme |
+|:--|:--|
+| ![Multi-term product search](docs/search.png) | ![Product page with colour variants](docs/product.png) |
+
+> Browse, search, cart, Stripe checkout, order history — plus an admin dashboard gated by database-level authorization.
 
 ---
 
@@ -164,11 +167,15 @@ The RLS tests are destructive — they drop and rebuild the `public` schema. Poi
 
 ---
 
-## Notes and trade-offs
+## Design notes
 
-- **Search and filtering run in the browser.** The catalogue is small enough to load in one query, so filtering locally is instant and costs no round trip. Past a few hundred products the right move is server-side `.ilike()` or a Postgres full-text index, with `.range()` for pagination.
-- **Pricing rules are duplicated** in `src/lib/pricing.ts` and `supabase/functions/_shared/pricing.ts`. An Edge Function bundle cannot import from `src/`. The client copy only decides what is *displayed*; the server copy decides what is *charged*.
-- **Overselling under concurrency is not handled.** Two customers buying the last unit at the same instant can both check out. A real shop solves this with stock reservations at checkout; here the trigger clamps at zero and the admin sees it.
+- **Search and filtering run in the browser.** The catalogue loads in a single query, so filtering locally is instant and costs no round trip. Past a few hundred products this moves server-side — `.ilike()` or a Postgres full-text index, with `.range()` for pagination.
+- **Pricing rules live on both sides, by design.** `src/lib/pricing.ts` decides what is *displayed*; `supabase/functions/_shared/pricing.ts` decides what is *charged*. An Edge Function bundle cannot import from `src/`, and the split is the point: the browser's copy is a convenience, the server's is the authority.
+
+## Future work
+
+- Stock reservations at checkout, so the last unit can only be committed to one customer at a time
+- Server-side search once the catalogue outgrows a single query
 
 ---
 
